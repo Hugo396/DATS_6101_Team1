@@ -87,3 +87,15 @@ thriller = subset(thriller, select = -c(description, director, director_id, star
 
 war = subset(war, select = -c(description, director, director_id, star, star_id, gross.in...))
 ```
+
+```{r, echo=T}
+#Combining all the data frames and removing duplicates, we can still use the data frames above for analysis, however.  Both methods are valid depending on our questions and eda.
+allmovies = rbind(action, adventure, animation, biography, crime, family, fantasy, noir, history, horror, mystery, romance, scifi, sports, thriller, war)
+
+#Remove duplicates
+allmovies = unique(allmovies$movie_id)
+
+#Check for duplicates
+duplicates = sum(duplicated(allmovies))
+duplicates
+```
