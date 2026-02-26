@@ -1,0 +1,89 @@
+---
+title: "Project 1 EDA"
+author: "Team 1"
+output:
+  html_document:
+    code_folding: show
+    number_sections: false
+    toc: yes
+    toc_depth: 3
+    toc_float: yes
+  pdf_document:
+    toc: yes
+    toc_depth: '3'
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(warning = F, message = F)
+options(scientific=T, digits = 3) 
+```
+
+
+```{r, echo=T}
+#Importing Necessary Libraries
+library(ezids)
+library(ggplot2)
+
+#Importing each .csv as data frames, grouped by genre
+action = read.csv("action.csv")  
+adventure = read.csv("adventure.csv")
+animation = read.csv("animation.csv")
+biography = read.csv("biography.csv")
+crime = read.csv("crime.csv")
+family = read.csv("family.csv")
+fantasy = read.csv("fantasy.csv")
+noir = read.csv("film-noir.csv")
+history = read.csv("history.csv")
+horror = read.csv("horror.csv")
+mystery = read.csv("mystery.csv")
+romance = read.csv("romance.csv")
+scifi = read.csv("scifi.csv")
+sports = read.csv("sports.csv")
+thriller = read.csv("thriller.csv")
+war = read.csv("war.csv")
+```
+
+```{r, echo=T}
+#Checking structure of the data frames (all should be the same as action)
+str(action)
+```
+```{r, echo=T}
+#We can remove some columns as we will not be needing them (some others are left in as we could use possibly ask more questions about them later)
+action = subset(action, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+#Showing the new structire of the data frame
+str(action)
+```
+```{r, echo=T}
+#Removing the columns for the rest of the data frames
+adventure = subset(adventure, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+animation = subset(animation, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+biography = subset(biography, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+crime = subset(crime, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+family = subset(family, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+fantasy = subset(fantasy, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+noir = subset(noir, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+history = subset(history, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+horror = subset(horror, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+mystery = subset(mystery, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+romance = subset(romance, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+scifi = subset(scifi, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+sports = subset(sports, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+thriller = subset(thriller, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+war = subset(war, select = -c(description, director, director_id, star, star_id, gross.in...))
+```
