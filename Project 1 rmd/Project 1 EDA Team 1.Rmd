@@ -93,9 +93,19 @@ war = subset(war, select = -c(description, director, director_id, star, star_id,
 allmovies = rbind(action, adventure, animation, biography, crime, family, fantasy, noir, history, horror, mystery, romance, scifi, sports, thriller, war)
 
 #Remove duplicates
-allmovies = unique(allmovies$movie_id)
+allmovies = allmovies[!duplicated(allmovies$movie_id), ]
 
 #Check for duplicates
 duplicates = sum(duplicated(allmovies))
 duplicates
+
+#Make year numeric
+allmovies$year = as.numeric(allmovies$year)
+
+#Create a filter for past 20 years and remove movies with no rating
+recentmovies= subset(allmovies, year >= 2000)
+recentmovies= subset(recentmovies, year <= 2023)
+recentmovies = recentmovies[!is.na(recentmovies$rating), ]
+
+summary(recentmovies$year)
 ```
