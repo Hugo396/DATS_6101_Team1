@@ -1,0 +1,176 @@
+---
+title: "Project 1 EDA"
+author: "Team 1"
+output:
+  html_document:
+    code_folding: show
+    number_sections: false
+    toc: yes
+    toc_depth: 3
+    toc_float: yes
+  pdf_document:
+    toc: yes
+    toc_depth: '3'
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(warning = F, message = F)
+options(scientific=T, digits = 3) 
+```
+
+
+```{r, echo=T}
+#Importing Necessary Libraries
+library(ezids)
+library(ggplot2)
+
+#Importing each .csv as data frames, grouped by genre
+action = read.csv("action.csv")  
+adventure = read.csv("adventure.csv")
+animation = read.csv("animation.csv")
+biography = read.csv("biography.csv")
+crime = read.csv("crime.csv")
+family = read.csv("family.csv")
+fantasy = read.csv("fantasy.csv")
+noir = read.csv("film-noir.csv")
+history = read.csv("history.csv")
+horror = read.csv("horror.csv")
+mystery = read.csv("mystery.csv")
+romance = read.csv("romance.csv")
+scifi = read.csv("scifi.csv")
+sports = read.csv("sports.csv")
+thriller = read.csv("thriller.csv")
+war = read.csv("war.csv")
+```
+
+```{r, echo=T}
+#Checking structure of the data frames (all should be the same as action)
+str(action)
+```
+```{r, echo=T}
+#We can remove some columns as we will not be needing them (some others are left in as we could use possibly ask more questions about them later)
+action = subset(action, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+#Showing the new structire of the data frame
+str(action)
+```
+```{r, echo=T}
+#Removing the columns for the rest of the data frames
+adventure = subset(adventure, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+animation = subset(animation, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+biography = subset(biography, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+crime = subset(crime, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+family = subset(family, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+fantasy = subset(fantasy, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+noir = subset(noir, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+history = subset(history, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+horror = subset(horror, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+mystery = subset(mystery, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+romance = subset(romance, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+scifi = subset(scifi, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+sports = subset(sports, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+thriller = subset(thriller, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+war = subset(war, select = -c(description, director, director_id, star, star_id, gross.in...))
+```
+
+```{r, echo=T}
+#Combining all the data frames and removing duplicates, we can still use the data frames above for analysis, however.  Both methods are valid depending on our questions and eda.
+allmovies = rbind(action, adventure, animation, biography, crime, family, fantasy, noir, history, horror, mystery, romance, scifi, sports, thriller, war)
+
+#Remove duplicates
+allmovies <- allmovies[!duplicated(allmovies$movie_id), ]
+
+#Check for duplicates
+duplicates = sum(duplicated(allmovies))
+duplicates
+```
+
+```{r, echo=T}
+# ==========================
+# Q1: Genre vs Rating
+# ==========================
+
+# Step 1) Clean year and filter to 2006-2025 with valid ratings.
+
+# The original "year" column was categorized as character variable and included non-numeric values. These irregular entries caused issues when attempted numeric filtering.
+
+# To address this, we extracted only numeric characters from the "year" column using regular expression and converted the result to an integer variable "year_num".
+allmovies$year_num <- as.numeric(allmovies$year)
+
+# Keep only movies with valid rating and release year (2006-2025).
+allmovies_q1base <- subset(allmovies,
+                           !is.na(rating) &
+                           !is.na(year_num) &
+                           year_num >= 2006 &
+                           year_num <= 2025)
+dim(allmovies_q1base)
+summary(allmovies_q1base$year_num)
+sum(is.na(allmovies$year_num))
+```
+
+```{r, echo=T}
+# Step 2) Create main genre
+# - The original genre column can contain multiple genres.
+# - Use only the first genre listed to make the analysis interpretable.
+allmovies_q1base$main_genre <- trimws(sub(",.*", "", allmovies_q1base$genre))
+table(allmovies_q1base$main_genre)
+```
+
+```{r, echo=T}
+# Step 3) Remove very small genre group (stability for ANOVA)
+counts <- table(allmovies_q1base$main_genre)
+
+# Keep genres with al least 100 movies
+keep <- names(counts[counts >= 100])
+
+# Filter
+allmovies_q1 <- subset(allmovies_q1base, main_genre %in% keep)
+allmovies_q1$main_genre <- as.factor(allmovies_q1$main_genre)
+
+table(allmovies_q1$main_genre)
+dim(allmovies_q1)
+```
+
+```{r, echo=T}
+# Step 4) EDA: Boxplot + descriptive statistics
+
+# Visualization with boxplot.
+library(ggplot2)
+
+ggplot(allmovies_q1, aes(main_genre, y = rating)) +
+  geom_boxplot(fill = "skyblue", color = "black") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+# Show basic descriptive stats by genre.
+aggregate(rating ~ main_genre, allmovies_q1, mean)
+aggregate(rating ~ main_genre, allmovies_q1, sd)
+```
+
+```{r, echo=T}
+# Step 5) ANOVA + Tukey post-hoc
+# Test if mean ratings differ across genres (ANOVA + Tukey).
+anova_result <- aov(rating ~ main_genre, data = allmovies_q1)
+summary(anova_result)
+
+tukey <- TukeyHSD(anova_result)
+tukey
+
+# ANOVA result: Based on the one-way ANOVA result, mean IMDB rating differ significantly across main genres, indicating that genre has statistically significant effect on movie ratings (F(16, 64268) = 411, p < 0.001). 
+
+# Tukey Post-hoc result: Tukey post-hoc test suggests that Biography, History, and Sport have higher mean ratings compared to many other genres, while Horror have lower mean ratings. Some genre pairs do not show statistically significant differences.
+```
