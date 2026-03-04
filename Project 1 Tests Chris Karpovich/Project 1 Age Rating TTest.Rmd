@@ -1,5 +1,5 @@
 ---
-title: "Project 1 EDA"
+title: "Project 1 Age Rating and IMDB Score"
 author: "Chris Karpovich"
 output:
   html_document:
@@ -115,7 +115,7 @@ PG = subset(allmovies, certificate == "PG")
 R = subset(allmovies, certificate == "R")
 
 cleanmovies=rbind(PG, R)
-summary(subset)
+summary(cleanmovies)
 
 ```
 ```{r, echo=T}
@@ -130,7 +130,7 @@ ggplot(data=PG, aes(x=rating)) +
 
 ggplot(data=R, aes(x=rating)) + 
   geom_histogram(col="red", 
-                 fill="black", 
+                 fill="darkblue", 
                  alpha = .7) +
   labs(x="IMDB Rating", y="Frequency") +
   labs(title="Distribution of IMDB Ratings for R Movies") 
@@ -142,16 +142,11 @@ summary(R)
 ```{r, echo=T}
 ggplot(cleanmovies, aes(x=certificate, y=rating)) + 
   geom_boxplot( color ="blue",fill = "yellow", outlier.color="red", outlier.shape=8, outlier.size=4) +
-  labs(title="IMDB Rating for Movies with different Age Ratings", x="Age Rating", y = "IMDB Rating")
+  labs(title="Boxplot IMDB scores for Movies with PG and R Ratings", x="Age Rating", y = "IMDB Rating")
 
 ```
 ```{r, echo=T}
 ttest = t.test(PG$rating, R$rating)
 ttest
-
-```
-```{r, echo=T}
-#Time to look at another question, do history movies have a longer runtime than action movies?
-history = subset(allmovies, )
 
 ```
