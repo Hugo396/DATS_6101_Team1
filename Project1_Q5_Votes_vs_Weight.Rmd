@@ -1,0 +1,138 @@
+---
+title: "Project 1 Votes vs Weight"
+author: "Hugo Ndizeye"
+output:
+  html_document:
+    code_folding: show
+    number_sections: false
+    toc: yes
+    toc_depth: 3
+    toc_float: yes
+  pdf_document:
+    toc: yes
+    toc_depth: '3'
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(warning = F, message = F)
+options(scientific=T, digits = 3) 
+```
+
+```{r, echo=T}
+#Importing Necessary Libraries
+library(ezids)
+library(ggplot2)
+
+
+# Now import each .csv file
+action <- read.csv("action.csv")  
+adventure <- read.csv("adventure.csv")
+animation <- read.csv("animation.csv")
+biography <- read.csv("biography.csv")
+crime <- read.csv("crime.csv")
+family <- read.csv("family.csv")
+fantasy <- read.csv("fantasy.csv")
+noir <- read.csv("film-noir.csv")
+history <- read.csv("history.csv")
+horror <- read.csv("horror.csv")
+mystery <- read.csv("mystery.csv")
+romance <- read.csv("romance.csv")
+scifi <- read.csv("scifi.csv")
+sports <- read.csv("sports.csv")
+thriller <- read.csv("thriller.csv")
+war <- read.csv("war.csv")
+```
+
+```{r, echo=T}
+#Checking structure of the data frames (all should be the same as action)
+str(action)
+```
+
+```{r}
+# ==========================
+# Q5: Votes vs Weight
+# ==========================
+
+# Keep only the columns that are needed 
+action <- subset(action, select = c("movie_id", "year", "rating", "votes"))
+adventure <- subset(adventure, select = c("movie_id", "year", "rating", "votes"))
+animation <- subset(animation, select = c("movie_id", "year", "rating", "votes"))
+biography <- subset(biography, select = c("movie_id", "year", "rating", "votes"))
+crime <- subset(crime, select = c("movie_id", "year", "rating", "votes"))
+family <- subset(family, select = c("movie_id", "year", "rating", "votes"))
+fantasy <- subset(fantasy, select = c("movie_id", "year", "rating", "votes"))
+noir <- subset(noir, select = c("movie_id", "year", "rating", "votes"))
+history <- subset(history, select = c("movie_id", "year", "rating", "votes"))
+horror <- subset(horror, select = c("movie_id", "year", "rating", "votes"))
+mystery <- subset(mystery, select = c("movie_id", "year", "rating", "votes"))
+romance <- subset(romance, select = c("movie_id", "year", "rating", "votes"))
+scifi <- subset(scifi, select = c("movie_id", "year", "rating", "votes"))
+sports <- subset(sports, select = c("movie_id", "year", "rating", "votes"))
+thriller <- subset(thriller, select = c("movie_id", "year", "rating", "votes"))
+war <- subset(war, select = c("movie_id", "year", "rating", "votes"))
+
+# Combine all movies into one dataset
+allmovies <- rbind(action, adventure, animation, biography, crime, 
+                   family, fantasy, noir, history, horror, 
+                   mystery, romance, scifi, sports, thriller, war)
+
+# Remove duplicate
+allmovies <- allmovies[!duplicated(allmovies$movie_id), ]
+
+# Clean year column (convert to numeric)
+allmovies$year <- as.numeric(allmovies$year)
+
+# Check what we have
+dim(allmovies)
+head(allmovies)
+summary(allmovies$year)
+summary(allmovies$rating)
+summary(allmovies$votes)
+
+
+```
+
+```{r}
+# Filtering for 2000-2023 with valid ratings and votes
+q5data <- subset(allmovies,
+                       !is.na(rating) &          
+                       !is.na(votes) &            
+                       votes > 0 &                 
+                       !is.na(year) &             
+                       year >= 2000 &               
+                       year <= 2023)                
+
+summary(q5data)
+
+```
+
+```{r}
+# Create vote groups based on the quartiles 
+q5data$vote_group <- 1
+
+# Assign groups based on the quartile cutoffs
+q5data$vote_group[q5data$votes > 32] <- 2    
+q5data$vote_group[q5data$votes > 155] <- 3    
+q5data$vote_group[q5data$votes > 947] <- 4  
+# Make it a factor for plots
+q5data$vote_group <- factor(q5data$vote_group,levels = 1:4,labels = c("Lowest Votes", "Low", "Medium", "High"))
+
+# Check the groups
+table(q5data$vote_group)
+
+# Boxplot
+ggplot(q5data, aes(x = vote_group, y = rating, fill = vote_group)) +
+  geom_boxplot() +
+  labs(title = "Movie Ratings by Vote Count",
+       x = "Vote Group", y = "IMDB Rating") +
+  theme_minimal()
+
+# The ANOVA test 
+anova_result <- aov(rating ~ vote_group, data = q5data)
+summary(anova_result)
+
+# Compares the lowest vs highest
+low <- subset(q5data, vote_group == "Lowest Votes")
+high <- subset(q5data, vote_group == "High")
+t.test(low$rating, high$rating)
+```
+
