@@ -129,7 +129,7 @@ ggplot(data=pre2010, aes(x=runtime)) +
   geom_histogram(col="yellow", 
                  fill="darkblue", 
                  alpha = .7) +
-  labs(x="Runtime", y="Frequency") +
+  labs(x="Runtime (mins)", y="Frequency") +
   labs(title="Distribution of Runtimes for Movies Produced Before 2010") 
 
 
@@ -137,8 +137,8 @@ ggplot(data=post2010, aes(x=runtime)) +
   geom_histogram(col="red", 
                  fill="black", 
                  alpha = .7) +
-  labs(x="Runtime", y="Frequency") +
-  labs(title="Distribution of Runtimes for for Movies Produced After 2010") 
+  labs(x="Runtime (mins)", y="Frequency") +
+  labs(title="Distribution of Runtimes for Movies Produced After 2010") 
 
 summary(pre2010$runtime)
 summary(post2010$runtime)
@@ -154,12 +154,11 @@ yeartest=rbind(pre2010, post2010)
 
 ggplot(yeartest, aes(x=timeframe, y=runtime)) + 
   geom_boxplot( color ="blue",fill = "yellow", outlier.color="red", outlier.shape=8, outlier.size=4) +
-  labs(title="Boxplot of Runtime for Movies Before and After 2010", x="Genre", y = "Runtime")
+  labs(title="Boxplot of Runtime for Movies Before and After 2010", x="Timeframe", y = "Runtime (mins)")
 
 ```
 
 ```{r, echo=T}
 ttestyear = t.test(pre2010$runtime, post2010$runtime)
 ttestyear
-
 ```

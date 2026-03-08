@@ -142,11 +142,15 @@ summary(R)
 ```{r, echo=T}
 ggplot(cleanmovies, aes(x=certificate, y=rating)) + 
   geom_boxplot( color ="blue",fill = "yellow", outlier.color="red", outlier.shape=8, outlier.size=4) +
-  labs(title="Boxplot IMDB scores for Movies with PG and R Ratings", x="Age Rating", y = "IMDB Rating")
+  labs(title="Boxplot of IMDB scores for Movies with PG and R Ratings", x="Age Rating", y = "IMDB Rating")
 
 ```
 ```{r, echo=T}
 ttest = t.test(PG$rating, R$rating)
 ttest
 
+```
+```{r, echo=T}
+str(PG)
+str(R)
 ```
