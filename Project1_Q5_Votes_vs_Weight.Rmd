@@ -106,33 +106,32 @@ summary(q5data)
 ```
 
 ```{r}
-# Create vote groups based on the quartiles 
-q5data$vote_group <- 1
-
-# Assign groups based on the quartile cutoffs
-q5data$vote_group[q5data$votes > 32] <- 2    
-q5data$vote_group[q5data$votes > 155] <- 3    
-q5data$vote_group[q5data$votes > 947] <- 4  
+# Creating the vote groups based on the quartiles 
+q5data$groups[q5data$votes <= 32] <- 1
+q5data$groups[q5data$votes > 32] <- 2    
+q5data$groups[q5data$votes > 155] <- 3    
+q5data$groups[q5data$votes > 947] <- 4  
 # Make it a factor for plots
-q5data$vote_group <- factor(q5data$vote_group,levels = 1:4,labels = c("Lowest Votes", "Low", "Medium", "High"))
+q5data$groups <- factor(q5data$groups,levels = 1:4,labels = c("Lowest Votes", "Low", "Medium", "High"))
 
 # Check the groups
-table(q5data$vote_group)
+table(q5data$groups)
 
 # Boxplot
-ggplot(q5data, aes(x = vote_group, y = rating, fill = vote_group)) +
+ggplot(q5data, aes(x = groups, y = rating, fill = groups)) +
   geom_boxplot() +
   labs(title = "Movie Ratings by Vote Count",
        x = "Vote Group", y = "IMDB Rating") +
   theme_minimal()
 
 # The ANOVA test 
-anova_result <- aov(rating ~ vote_group, data = q5data)
+anova_result <- aov(rating ~ groups, data = q5data)
 summary(anova_result)
 
 # Compares the lowest vs highest
-low <- subset(q5data, vote_group == "Lowest Votes")
-high <- subset(q5data, vote_group == "High")
+low <- subset(q5data, groups == "Lowest Votes")
+high <- subset(q5data, groups == "High")
 t.test(low$rating, high$rating)
 ```
+
 
