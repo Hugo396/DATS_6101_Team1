@@ -125,13 +125,14 @@ ggplot(q5data, aes(x = groups, y = rating, fill = groups)) +
   theme_minimal()
 
 # The ANOVA test 
-anova_result <- aov(rating ~ groups, data = q5data)
-summary(anova_result)
+q5anova <- aov(rating ~ groups, data = q5data)
+summary(q5anova)
 
 # Compares the lowest vs highest
 low <- subset(q5data, groups == "Lowest Votes")
 high <- subset(q5data, groups == "High")
 t.test(low$rating, high$rating)
 ```
+
 
 
