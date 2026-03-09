@@ -1,0 +1,868 @@
+---
+title: "DATS_6101_Project_1"
+author: "Chris Karpovich, Stella Kwon, Hugo Ndizeye"
+date: "2026-03-08"
+output:
+  html_document:
+    code_folding: show
+    number_sections: false
+    toc: yes
+    toc_depth: 3
+    toc_float: yes
+  pdf_document:
+    toc: yes
+    toc_depth: '3'
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(warning = F, message = F)
+options(scientific=T, digits = 3) 
+```
+
+
+```{r, echo=TRUE}
+#Importing Necessary Libraries
+library(ezids)
+library(ggplot2)
+library(dplyr)
+library(gridExtra)
+library(grid)
+library(multcompView)
+
+#Importing each .csv as data frames, grouped by genre
+action = read.csv("action.csv")  
+adventure = read.csv("adventure.csv")
+animation = read.csv("animation.csv")
+biography = read.csv("biography.csv")
+crime = read.csv("crime.csv")
+family = read.csv("family.csv")
+fantasy = read.csv("fantasy.csv")
+noir = read.csv("film-noir.csv")
+history = read.csv("history.csv")
+horror = read.csv("horror.csv")
+mystery = read.csv("mystery.csv")
+romance = read.csv("romance.csv")
+scifi = read.csv("scifi.csv")
+sports = read.csv("sports.csv")
+thriller = read.csv("thriller.csv")
+war = read.csv("war.csv")
+```
+
+# Introduction
+
+The purpose of this project was to explore patterns in IMDb movie data using exploratory data analysis and statistical inference. Our team worked with a large movie dataset obtained from Kaggle and focused on films released between 2000 and 2023. Originally the data contained roughly 270,000 IMDb movie observations, and it was split into multiple csv files based on genre. After cleaning it up by merging the files into one dataset, removing duplicates, and narrowing it down, we were left with roughly 110,000 observations. Then we developed 5 SMART questions related to movie ratings, runtime, certification, genre, and vote count. Through visualizations, summaries, and hypothesis testing, we focused to identify whether these movie characteristics were associated with measurable differences in IMDb ratings or runtime.
+
+# Dataset Description
+
+1. What do we know about this dataset?
+The data that was used in our project was obtained from Kaggle. Originally the data contained roughly 270,000 IMDB movie observations, and it was split into multiple csv files based on genre. After cleaning it up by merging the files into one data set, removing duplicates, and narrowing it down to the beginning of the 21 century, specifically 2000 - 2023, we were left with roughly 110,000 observations.  
+
+2. What are the limitations of the dataset? 
+Even though the dataset contains a large number of movie observations, there are several limitations that should be considered. First, IMDb ratings are based on user-submitted votes. This indicates that the ratings may be influenced by audience bias, popularity, or online voting behavior rather than showing the film quality. Second,  the number of votes varies between movies. Popular films tend to have a very large number of votes, while less popular or niche-based films may have a relatively small size of votes. Third, because the dataset was provided by a third party and distributed through Kaggles, there may be missing values and inconsistencies. Lastly, restricting the dataset to movies released between 2000 and 2023 allows to focus on recent trends, but also removes older films that might have additional historical context.
+
+3. How was the information gathered? 
+The information used in our project was gathered by an independent party who made it publicly available on Kaggle. 
+
+4. What analysis has already been completed related to the content in your dataset? 
+Previous studies and analyses explored patterns in IMDb ratings and movie characteristics. The researchers tested how factors, such as genre, popularity, and number of votes, influence audience ratings. This background research helped guide the development of our project questions.
+
+5. How did the research you gathered contribute to your question development? 
+Previous research on IMDb data and movie-related tests helped us to come up with 5 SMART questions for our project that were both meaningful and testable. 
+
+6. What additional information would be beneficial?
+Some beneficial information could be movie budgets, box office revenue, critic scores, or streaming platform studies. These information could provide further insights on how commercial success and critical reception relate to audience ratings.
+
+7. How did your question change, if at all, after Exploratory Data Analysis? 
+
+8. Based on EDA can you begin to sketch out an answer to your question? 
+
+# Technical Analysis
+
+Data Cleaning and Preparation:
+
+Before running any analysis, data cleaning and preparation step were required. The original dataset contained multiple csv files separated by genre. Duplicated movies were removed and relevant variables were cleaned and converted into appropriate data types. 
+
+```{r, echo=TRUE}
+#Checking structure of the data frames (all should be the same as action)
+str(action)
+```
+```{r, echo=TRUE}
+#We can remove some columns as we will not be needing them (some others are left in as we could use possibly ask more questions about them later)
+action = subset(action, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+#Showing the new structire of the data frame
+str(action)
+```
+```{r, echo=TRUE}
+#Removing the columns for the rest of the data frames
+adventure = subset(adventure, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+animation = subset(animation, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+biography = subset(biography, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+crime = subset(crime, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+family = subset(family, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+fantasy = subset(fantasy, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+noir = subset(noir, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+history = subset(history, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+horror = subset(horror, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+mystery = subset(mystery, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+romance = subset(romance, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+scifi = subset(scifi, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+sports = subset(sports, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+thriller = subset(thriller, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+war = subset(war, select = -c(description, director, director_id, star, star_id, gross.in...))
+```
+
+# Question 1: Is there a difference in IMDb ratings across movie genres?
+
+Our first SMART question analyzes whether IMDb ratings differ across movie genres. 
+
+To explore this question, we first grouped the dataset by genre and looked at the summary statistics for IMDb ratings. This allowed us to get an overall sense of how ratings are distributed within each genre before running any statistical tests. 
+
+```{r, echo=TRUE}
+#Combining all the data frames and removing duplicates, we can still use the data frames above for analysis, however.  Both methods are valid depending on our questions and eda.
+allmovies = rbind(action, adventure, animation, biography, crime, family, fantasy, noir, history, horror, mystery, romance, scifi, sports, thriller, war)
+
+#Remove duplicates
+allmovies <- allmovies[!duplicated(allmovies$movie_id), ]
+
+#Check for duplicates
+duplicates = sum(duplicated(allmovies))
+duplicates
+
+allmovies$year_num <- as.numeric(allmovies$year)
+
+# Keep only movies with valid rating and release year (2000-2023).
+allmovies_q1base <- subset(allmovies,
+                           !is.na(rating) &
+                           !is.na(year_num) &
+                           year_num >= 2000 &
+                           year_num <= 2023)
+dim(allmovies_q1base)
+summary(allmovies_q1base$year_num)
+sum(is.na(allmovies$year_num))
+```
+
+```{r, echo=TRUE}
+# Step 2) Create main genre
+# - The original genre column can contain multiple genres.
+# - Use only the first genre listed to make the analysis interpretable.
+allmovies_q1base$main_genre <- trimws(sub(",.*", "", allmovies_q1base$genre))
+table(allmovies_q1base$main_genre)
+```
+
+```{r, echo=TRUE}
+# Step 3) Remove very small genre group (stability for ANOVA)
+counts <- table(allmovies_q1base$main_genre)
+
+# Keep genres with al least 100 movies
+keep <- names(counts[counts >= 100])
+
+# Filter
+allmovies_q1 <- subset(allmovies_q1base, main_genre %in% keep)
+allmovies_q1$main_genre <- as.factor(allmovies_q1$main_genre)
+
+table(allmovies_q1$main_genre)
+dim(allmovies_q1)
+```
+
+The boxplot shows the distribution of IMDb ratings across the different genres. Overall, the median mean ratings are fairly similar across genres, but some genres appear slightly higher or lower than others. The spread of ratings also varies by genre, which indicates that some genres may have more variability in how audiences rate them.
+
+```{r, echo=TRUE}
+# Step 4) EDA: Boxplot + descriptive statistics
+
+# Visualization with boxplot.
+library(ggplot2)
+library(dplyr)
+
+allmovies_q1 <- allmovies_q1 %>%
+  mutate(main_genre = reorder(main_genre, -rating, FUN = mean))
+
+ggplot(allmovies_q1, aes(main_genre, y = rating)) +
+  geom_boxplot(fill = "skyblue", color = "black") +
+  stat_summary(fun = mean, geom = "point", color = "red", size = 1) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) + labs(title = "IMDB Rating by Genre (2000 - 2023)", x = "Genre", y = "IMDB Rating")
+
+ggsave("Q1_Genre_vs_Rating_boxplot.png")
+
+# Show basic descriptive stats by genre.
+aggregate(rating ~ main_genre, allmovies_q1, mean)
+aggregate(rating ~ main_genre, allmovies_q1, sd)
+
+mean_table <- aggregate(rating ~ main_genre, allmovies_q1, mean)
+mean_table <- mean_table[order(-mean_table$rating), ]
+mean_table
+
+library(gridExtra)
+library(grid)
+
+table_plot <- tableGrob(mean_table)
+png("Q1_Mean_Rating_Table.png", width = 800, height = 600)
+grid.draw(table_plot)
+dev.off()
+```
+
+To statistically test whether the mean ratings differ across genres, we performed a one-way ANOVA test. The ANOVA results show a statistically significant difference in mean ratings between at least some of the genre groups (p < 0.001) with quite large F-statistic (16, 74981) = 469. This result shows that genre does have some influence on how movies are rated.
+
+Since ANOVA only tells us that a difference exists somewhere between the groups, so we performed a Tukey post-hoc test to determine which specific genres differ from each other. The Tuckey test compares all possible pairs of genres while controlling for multiple comparisons. The results show some pairs with statistically significant differences in their mean ratings.
+
+The differences in ratings may appear relatively small in the visualizations, the dataset contains a large number of movies. Because of this large sample size, even small differences between genres can still be detected as statistically significant.
+
+```{r, echo=TRUE}
+# Step 5) ANOVA + Tukey post-hoc
+# Test if mean ratings differ across genres (ANOVA + Tukey).
+anova_result <- aov(rating ~ main_genre, data = allmovies_q1)
+summary(anova_result)
+
+library(dplyr)
+library(ggplot2)
+
+summary_table <- allmovies_q1 %>%
+  group_by(main_genre) %>%
+  summarize(
+    mean_rating = mean(rating),
+    se = sd(rating)/sqrt(n()),
+    .groups = "drop"
+  )
+
+p_anova <- ggplot(summary_table,
+                  aes(x = reorder(main_genre, -mean_rating),
+                      y = mean_rating)) +
+  geom_point(size = 3) +
+  geom_errorbar(aes(ymin = mean_rating - 1.96*se,
+                    ymax = mean_rating + 1.96*se),
+                width = 0.2) +
+  theme_minimal(base_size = 14) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(title = "Mean IMDB Rating with 95% CI (2000–2023)",
+       x = "Genre",
+       y = "Mean Rating")
+
+ggsave("Q1_ANOVA_Mean_CI.png", p_anova, width = 11, height = 6, dpi = 300)
+
+tukey <- TukeyHSD(anova_result)
+tukey
+
+# install.packages(c("multcompView", "dplyr", "ggplot2"))
+
+library(multcompView)
+library(dplyr)
+library(ggplot2)
+
+allmovies_q1$main_genre <- as.factor(gsub("-", "_", as.character(allmovies_q1$main_genre)))
+
+anova_result <- aov(rating ~ main_genre, data = allmovies_q1)
+tukey <- TukeyHSD(anova_result)
+
+letters <- multcompLetters4(anova_result, tukey)
+
+mean_table <- allmovies_q1 %>%
+  group_by(main_genre) %>%
+  summarize(mean_rating = mean(rating), .groups = "drop") %>%
+  mutate(letter = letters$main_genre[as.character(main_genre)]) %>%
+  arrange(desc(mean_rating))
+
+p_letters <- ggplot(mean_table, aes(x = reorder(main_genre, -mean_rating), y = mean_rating)) +
+  geom_col(fill = "lavender", color = "black") +
+  geom_text(aes(label = letter), vjust = -0.4, size = 4) +
+  theme_minimal(base_size = 12) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(title = "Mean IMDB Rating by Genre with Tukey Grouping (2000–2023)",
+       x = "Genre", y = "Mean IMDB Rating")
+
+ggsave("Q1_Tukey_Grouping_Letters.png", p_letters, width = 11, height = 6, dpi = 300)
+```
+
+# Question 2: Is there a difference in IMDb scores for PG and R rated movies?
+
+Our second question asks if there is a difference in IMDb scores between PG and R rated movies.  All the movies in question are publicly distributed, which is the qualification for being included into IMDb’s database. Similarly with our first question, all movies included in the data frame were released between 2000 and 2023, as we wanted this study to focus on more recent movies rather than movies released decades prior to now.  The null hypothesis of the two sample t-test is that there is no difference in mean IMDb score between PG and R rated movies.  The alternative hypothesis, on the other hand, is that there is a difference in mean IMDb score.  Although we observe the sample means from our dataset, the point of the t-test is to see whether the difference in sample means suggests a true difference in the population of publicly distributed movies released between 2000 and 2023.
+
+Before the test could be run, some minor data preparation and exploratory data analysis needed to be completed.  First, I would like to explain why I chose PG rated moves over G rated movies.  This decision simply came down to the fact that G rated movies are the least commonly rated movies on IMDb. The PG rating simply had many more observations to work with and still fit within the basic idea of comparing family friendly movies to movies made for mature audiences.  In order to prep the data, I first had to make sure that year and age rating had the data types of numeric and factor respectively.  A subset for PG as well as R rated movies was created and stored as new dataframes, and missing or NA values were removed from the dataframes.
+
+```{r, echo=T}
+#Checking structure of the data frames (all should be the same as action)
+str(action)
+```
+```{r, echo=T}
+#Importing Necessary Libraries
+library(ezids)
+library(ggplot2)
+
+#Importing each .csv as data frames, grouped by genre
+action = read.csv("action.csv")  
+adventure = read.csv("adventure.csv")
+animation = read.csv("animation.csv")
+biography = read.csv("biography.csv")
+crime = read.csv("crime.csv")
+family = read.csv("family.csv")
+fantasy = read.csv("fantasy.csv")
+noir = read.csv("film-noir.csv")
+history = read.csv("history.csv")
+horror = read.csv("horror.csv")
+mystery = read.csv("mystery.csv")
+romance = read.csv("romance.csv")
+scifi = read.csv("scifi.csv")
+sports = read.csv("sports.csv")
+thriller = read.csv("thriller.csv")
+war = read.csv("war.csv")
+```
+```{r, echo=T}
+#We can remove some columns as we will not be needing them (some others are left in as we could use possibly ask more questions about them later)
+action = subset(action, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+#Showing the new structire of the data frame
+str(action)
+```
+```{r, echo=T}
+#Removing the columns for the rest of the data frames
+adventure = subset(adventure, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+animation = subset(animation, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+biography = subset(biography, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+crime = subset(crime, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+family = subset(family, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+fantasy = subset(fantasy, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+noir = subset(noir, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+history = subset(history, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+horror = subset(horror, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+mystery = subset(mystery, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+romance = subset(romance, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+scifi = subset(scifi, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+sports = subset(sports, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+thriller = subset(thriller, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+war = subset(war, select = -c(description, director, director_id, star, star_id, gross.in...))
+```
+
+```{r, echo=TRUE}
+
+allmovies = rbind(action, adventure, animation, biography, crime, family, fantasy, noir, history, horror, mystery, romance, scifi, sports, thriller, war)
+
+allmovies$year = as.numeric(allmovies$year)
+allmovies$certificate = as.factor(allmovies$certificate)
+
+allmovies = subset(allmovies, year >=2000)
+
+#Remove duplicates
+allmovies = allmovies[!duplicated(allmovies$movie_id), ]
+
+#Check for duplicates
+duplicates = sum(duplicated(allmovies$movie_id))
+duplicates
+
+#Remove NA values from Certificate and Rating
+allmovies = allmovies[!is.na(allmovies$certificate),]
+allmovies = allmovies[!is.na(allmovies$rating),]
+
+
+#I only want 2 major movie ratings
+
+PG = subset(allmovies, certificate == "PG")
+R = subset(allmovies, certificate == "R")
+
+cleanmovies=rbind(PG, R)
+summary(cleanmovies)
+
+```
+
+For a two sample t-test, one assumption that must be satisfied is that the observations roughly follow the normal distribution.  Histograms were produced for the IMDb scores for both PG and R rated movies.  Both histograms appeared approximately normal, but slightly left skewed.  Each data frame had thousands of observations as well, which ensured a statistically sound two sample t-test would be conducted.  Given the shape of the distribution was approximately normal as well as the large number of observations in each data frame, we can safely conclude that the assumption of normality has been met.
+
+```{r, echo=TRUE}
+
+ggplot(data=PG, aes(x=rating)) + 
+  geom_histogram(col="green", 
+                 fill="black", 
+                 alpha = .7) +
+  labs(x="IMDB Rating", y="Frequency") +
+  labs(title="Distribution of IMDB Ratings for PG Movies") 
+
+
+ggplot(data=R, aes(x=rating)) + 
+  geom_histogram(col="red", 
+                 fill="darkblue", 
+                 alpha = .7) +
+  labs(x="IMDB Rating", y="Frequency") +
+  labs(title="Distribution of IMDB Ratings for R Movies") 
+
+summary(PG)
+summary(R)
+```
+
+Next, I produced boxplots for both the IMDb scores of PG rated movies as well as R rated movies.  The height of the boxplots were both approximately equal, informing us that our interquartile ranges were roughly similar.  However, looking at the median and interquartile range of PG movies, we can sense that PG movies may tend to score higher than R rated movies within our sample.  The boxplots indicated a few possible outliers for both PG and R rated movies, but since they did not impact the normality of the distribution in a big way, we can conclude that they can remain in the data frame and count as valid observations rather than complete outliers.  While it is still valuable to examine the variation between the two data frames, Welch’s two sample t-test does not assume equal variances
+
+After the histograms and boxplots were produced, we had all we needed in order to run our t-test.  Looking at the results, our p-value is extremely low at 6e-15, meaning that we reject the null hypothesis.  The confidence intervals signal that in our dataset, we are 95% confident that PG movies have scores that are .21 to .35 points higher on IMDb.  Again, the population that our sample was taken from are publicly distributed movies from 2000 to 2023.  Given that our sample makes up so much of the population, that extremely low p-value has some context to explain it.  With a p-value that small, the result is definitely statistically significant, however the difference in true population means is not massive.  
+```{r, echo=TRUE}
+ggplot(cleanmovies, aes(x=certificate, y=rating)) + 
+  geom_boxplot( color ="blue",fill = "yellow", outlier.color="red", outlier.shape=8, outlier.size=4) +
+  labs(title="Boxplot IMDB scores for Movies with PG and R Ratings", x="Age Rating", y = "IMDB Rating")
+
+```
+```{r, echo=TRUE}
+ttest = t.test(PG$rating, R$rating)
+ttest
+
+```
+
+# Question 3: Is there a difference in runtime between action and history movies?
+
+The third SMART question asks if there is a difference in runtime (in minutes) between action movies and history movies?  As with all of our questions, we are comparing sample means from our dataset to the broader population.  As a reminder, that population is publicly distributed movies which were released between 2000 and 2023.  Our null hypothesis for this test is that there is no difference in mean runtime between action and history movies, while our alternative hypothesis states that there is a difference in mean runtime between action and history movies.
+
+In order to prep the data for the Welch’s two sample t-test, some cleaning and subsetting needed to be done first.  Similarly to the previous test, duplicate movies and movies with NA values for runtime were removed from our data frames.  One data frame was created for movies that fall under the action genre, and the other was created for movies that are classified under the history genre.  In order to prevent movies that are both considered history and action movies from skewing the data, I chose to remove any movie that was in both the action data frame and the history data frame.  This ensures that strictly action movies are compared against strictly history movies, preventing overlap from causing a faulty t-test.  When I first generated a histogram to examine the distribution, I noticed some extreme outliers impacting the normality of the distribution.  In order to prevent these extreme outliers from ruining the test, I created a minimum and maximum runtime interval where each movie would fall into.  This range was 30 minutes to 4 hours. My thought process was that any movie under 30 minutes should not really be classified as a movie to begin with, and movies over 4 hours are very uncommon.  This filtering changes our broader population to  publicly distributed movies which were released between 2000 and 2023 and have runtimes between 30 and 240 minutes.
+
+```{r, echo=T}
+#Importing Necessary Libraries
+library(ezids)
+library(ggplot2)
+
+#Importing each .csv as data frames, grouped by genre
+action = read.csv("action.csv")  
+adventure = read.csv("adventure.csv")
+animation = read.csv("animation.csv")
+biography = read.csv("biography.csv")
+crime = read.csv("crime.csv")
+family = read.csv("family.csv")
+fantasy = read.csv("fantasy.csv")
+noir = read.csv("film-noir.csv")
+history = read.csv("history.csv")
+horror = read.csv("horror.csv")
+mystery = read.csv("mystery.csv")
+romance = read.csv("romance.csv")
+scifi = read.csv("scifi.csv")
+sports = read.csv("sports.csv")
+thriller = read.csv("thriller.csv")
+war = read.csv("war.csv")
+```
+
+```{r, echo=TRUE}
+#We can remove some columns as we will not be needing them (some others are left in as we could use possibly ask more questions about them later)
+action = subset(action, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+#Showing the new structire of the data frame
+str(action)
+```
+```{r, echo=TRUE}
+#Removing the columns for the rest of the data frames
+adventure = subset(adventure, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+animation = subset(animation, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+biography = subset(biography, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+crime = subset(crime, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+family = subset(family, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+fantasy = subset(fantasy, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+noir = subset(noir, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+history = subset(history, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+horror = subset(horror, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+mystery = subset(mystery, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+romance = subset(romance, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+scifi = subset(scifi, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+sports = subset(sports, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+thriller = subset(thriller, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+war = subset(war, select = -c(description, director, director_id, star, star_id, gross.in...))
+```
+
+```{r, echo=TRUE}
+
+#Data Cleaning
+
+allmovies = rbind(action, adventure, animation, biography, crime, family, fantasy, noir, history, horror, mystery, romance, scifi, sports, thriller, war)
+
+allmovies$year = as.numeric(allmovies$year)
+
+action$runtime = as.numeric(gsub(" min", "", action$runtime))
+
+history$runtime = as.numeric(gsub(" min", "", history$runtime))
+
+action = subset(action, year >=2000)
+action = subset(action, runtime >=30)
+action = subset(action, runtime <=240)
+
+history = subset(history, year >=2000)
+history = subset(history, runtime >=30)
+history= subset(history, runtime <=240)
+
+#Remove NA values from runtime
+action = subset(action, is.na(runtime) == FALSE)
+history = subset(history, is.na(runtime) == FALSE)
+
+
+summary(history)
+summary(action)
+#More datacleaning, removing overlaps
+
+history2 = subset(history, !movie_id %in% action$movie_id)
+
+action2= subset(action, !movie_id %in% history$movie_id)
+
+```
+
+Once the data preparation was complete, we could start checking the assumption of normality which is necessary for a Welch’s two sample t-test.  In this case, the histograms showed that both action movie runtimes and history movie runtimes roughly followed the normal distribution, but were slightly right skewed.  Since each group had thousands of observations, Welch’s two sample t-test could handle our data well.  Especially with the change to the limit on runtime, the histograms satisfied our assumption of normality and we could proceed with the test.
+
+```{r, echo=TRUE}
+ggplot(data=history2, aes(x=runtime)) + 
+  geom_histogram(col="yellow", 
+                 fill="black", 
+                 alpha = .7) +
+  labs(x="Runtime", y="Frequency") +
+  labs(title="Distribution of Runtimes for History Movies") 
+
+
+ggplot(data=action2, aes(x=runtime)) + 
+  geom_histogram(col="red", 
+                 fill="black", 
+                 alpha = .7) +
+  labs(x="Runtime", y="Frequency") +
+  labs(title="Distribution of Runtimes for Action Movies") 
+
+summary(action2$runtime)
+summary(history2$runtime)
+```
+
+Before running the test, however, I still wanted to look at boxplots of each data frame, action and history movies.  The takeaways from these plots are that the variances are very similar, with action and history movies having approximately the same height.  The medians were also very similar, and looking at the plots shows that the vast majority of movies hover around the 100 minute mark for runtime.  There were also many possible outliers flagged, mostly because so many of the movies in the data frames again clustered around that 100 minute runtime value.  Since we already had set an upper and lower limit for the runtime of these movies, the potential outliers do not need to be removed and can count as valid observations in our sample.
+
+With our exploratory data analysis out of the way, we can now proceed with running the Welch’s two sample t-test.  Looking at the results of the test, we observed a p-value of .07 which is just about our .05 threshold.  In this case we fail to reject the null hypothesis and do not find statistically significant evidence that there is not a population difference in mean runtime for action and history movies.  With a p-value so close to .05, it may be possible that there is a difference, but looking at the sample means, if there was a difference it is so small that it does not make any real impact. We are seeing a sample mean difference of only 1 minute, meaning that any true difference in means is so small anyway that it is not practically significant.
+
+```{r, echo=TRUE}
+#combining into 1 Data frame to produce boxplots
+history2$genre2 = "History"
+action2$genre2 = "Action"
+
+runtimetest=rbind(history2, action2)
+
+
+ggplot(runtimetest, aes(x=genre2, y=runtime)) + 
+  geom_boxplot( color ="blue",fill = "yellow", outlier.color="red", outlier.shape=8, outlier.size=4) +
+  labs(title="Runtime Distribution for Action vs History Movies", x="Genre", y = "Runtime")
+
+```
+
+```{r, echo=TRUE}
+ttest = t.test(action2$runtime, history2$runtime)
+ttest
+
+```
+
+# Question 4: Is there a difference in runtime between movies made before 2010 and after 2010?
+
+The fourth SMART question asks if there is a difference in runtime (in minutes) between movies made before 2010 and after 2010.  Again, the broader population for this sample is publicly distributed movies which were released between 2000 and 2023.  The null hypothesis is that there is no difference in mean runtime for movies made before 2010 and movies made post 2010, while our alternative hypothesis states that there is a difference in those mean runtimes.
+
+As with the previous tests, data cleaning and preparation is necessary before we can start our exploratory data analysis.  Once again, movies with runtime values of NA were removed as well as any movies with duplicate movie ids.  Two data frames were created, one for movies made prior to 2010 and for movies made after 2010.  Similarly to the action movie versus history movie t-test, I wanted to remove extreme outliers in movie runtime by setting the maximum runtime and minimum runtime again to 30 minutes and 240 minutes respectively.  Once these filters and cleaning methods were employed, we could begin our exploratory data analysis and examine our assumptions.
+
+```{r, echo=T}
+#Importing Necessary Libraries
+library(ezids)
+library(ggplot2)
+
+#Importing each .csv as data frames, grouped by genre
+action = read.csv("action.csv")  
+adventure = read.csv("adventure.csv")
+animation = read.csv("animation.csv")
+biography = read.csv("biography.csv")
+crime = read.csv("crime.csv")
+family = read.csv("family.csv")
+fantasy = read.csv("fantasy.csv")
+noir = read.csv("film-noir.csv")
+history = read.csv("history.csv")
+horror = read.csv("horror.csv")
+mystery = read.csv("mystery.csv")
+romance = read.csv("romance.csv")
+scifi = read.csv("scifi.csv")
+sports = read.csv("sports.csv")
+thriller = read.csv("thriller.csv")
+war = read.csv("war.csv")
+```
+
+```{r, echo=TRUE}
+#We can remove some columns as we will not be needing them (some others are left in as we could use possibly ask more questions about them later)
+action = subset(action, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+#Showing the new structure of the data frame
+str(action)
+```
+```{r, echo=TRUE}
+#Removing the columns for the rest of the data frames
+adventure = subset(adventure, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+animation = subset(animation, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+biography = subset(biography, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+crime = subset(crime, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+family = subset(family, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+fantasy = subset(fantasy, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+noir = subset(noir, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+history = subset(history, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+horror = subset(horror, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+mystery = subset(mystery, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+romance = subset(romance, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+scifi = subset(scifi, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+sports = subset(sports, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+thriller = subset(thriller, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+war = subset(war, select = -c(description, director, director_id, star, star_id, gross.in...))
+```
+
+```{r, echo=TRUE}
+
+#Data Cleaning
+
+allmovies = rbind(action, adventure, animation, biography, crime, family, fantasy, noir, history, horror, mystery, romance, scifi, sports, thriller, war)
+
+allmovies$year = as.numeric(allmovies$year)
+allmovies$runtime = as.numeric(gsub(" min", "", allmovies$runtime))
+
+allmovies = subset(allmovies, year >=2000)
+
+#Remove duplicates
+allmovies = allmovies[!duplicated(allmovies$movie_id), ]
+
+#Check for duplicates
+duplicates = sum(duplicated(allmovies$movie_id))
+duplicates
+
+#Remove NA values from runtime
+allmovies = subset(allmovies, is.na(runtime) == FALSE)
+
+str(allmovies)
+```
+```{r, echo=TRUE}
+pre2010 = subset(allmovies, year < 2010)
+pre2010 = subset(pre2010, runtime >=30)
+pre2010 = subset(pre2010, runtime <=240)
+
+post2010 = subset(allmovies, year >=2010)
+post2010 = subset(post2010, runtime >=30)
+post2010 = subset(post2010, runtime <=240)
+
+str(pre2010)
+str(post2010)
+```
+
+Looking at the histograms generated, we see another approximately normal distribution.  These data frames had the most observations out of any of our other t-tests, with tens of thousands of movies included in each data frame.  With both the normal distribution and large number of observations, the assumption of normality for a Welch’s two sample t-test has been satisfied and we could move on to investigating boxplots for each data frame.
+
+```{r, echo=TRUE}
+ggplot(data=pre2010, aes(x=runtime)) + 
+  geom_histogram(col="yellow", 
+                 fill="darkblue", 
+                 alpha = .7) +
+  labs(x="Runtime", y="Frequency") +
+  labs(title="Distribution of Runtimes for Movies Produced Before 2010") 
+
+
+ggplot(data=post2010, aes(x=runtime)) + 
+  geom_histogram(col="red", 
+                 fill="black", 
+                 alpha = .7) +
+  labs(x="Runtime", y="Frequency") +
+  labs(title="Distribution of Runtimes for for Movies Produced After 2010") 
+
+summary(pre2010$runtime)
+summary(post2010$runtime)
+```
+
+Examining the generated boxplots, we can see that the variances of each group are again similar, with roughly equal heights for each.  The medians and interquartile ranges are also very similar, again with the most observations centered around that 100 minute mark which seems to be the gold standard for movie runtimes.  It should be noted that the boxplots show many possible outliers.  Like our previous test, we have an established maximum and minimum runtime for each movie, being 30 minutes and 240 minutes.  With this established range, we can conclude that these possible outliers can remain in the sample as they both do not massively impact the distribution and also fit into our defined limits.  They are valid observations and do not need to be removed.
+
+With our normality assumption satisfied and some exploratory data analysis completed, we can now move on to running our two sample t-test. The results of the test show another extremely low p-value less than 2e-16, meaning we reject the null hypothesis.  We can infer from the results that the true difference in means is not equal to 0, and we are 95% confident that movies released after 2010 are shorter by between 2.93 and 3.65 minutes.  Again, it must be stated that the population that we are comparing to here is publicly distributed movies made between 2000 and 2023 with runtimes between 30 and 240 minutes long.  While this test is very statistically significant, again the difference in means is very small.  While the difference does seem to exist within our sample, that difference is only about 2 to 3 minutes long, which is not a huge difference in the grand scheme of things.  It should be mentioned again that the extremely small p-value does make sense when we consider that our sample makes up such a huge chunk of our broader population.
+
+```{r, echo=TRUE}
+#combining into 1 Data frame to produce boxplots
+pre2010$timeframe = "Pre 2010"
+post2010$timeframe = "Post 2010"
+
+yeartest=rbind(pre2010, post2010)
+
+
+ggplot(yeartest, aes(x=timeframe, y=runtime)) + 
+  geom_boxplot( color ="blue",fill = "yellow", outlier.color="red", outlier.shape=8, outlier.size=4) +
+  labs(title="Boxplot of Runtime for Movies Before and After 2010", x="Genre", y = "Runtime")
+
+```
+
+```{r, echo=TRUE}
+ttestyear = t.test(pre2010$runtime, post2010$runtime)
+ttestyear
+
+```
+
+# Question 5: How does the number of votes influence a movie's IMDb score?
+
+The analysis was conducted by first creating four groups based on the voting quartiles.  
+The first group, which represents ‘Lowest Votes’, has 18,934 movies with 32 votes or less. The second group ‘Low’, has 18,645 movies with 33–155 votes. The third group ‘Medium,’ has 18,774 movies with 156–947 votes. The fourth group ‘High’, has 18,779 movies with 948 votes or more.
+
+```{r, echo=T}
+#Importing Necessary Libraries
+library(ezids)
+library(ggplot2)
+
+#Importing each .csv as data frames, grouped by genre
+action = read.csv("action.csv")  
+adventure = read.csv("adventure.csv")
+animation = read.csv("animation.csv")
+biography = read.csv("biography.csv")
+crime = read.csv("crime.csv")
+family = read.csv("family.csv")
+fantasy = read.csv("fantasy.csv")
+noir = read.csv("film-noir.csv")
+history = read.csv("history.csv")
+horror = read.csv("horror.csv")
+mystery = read.csv("mystery.csv")
+romance = read.csv("romance.csv")
+scifi = read.csv("scifi.csv")
+sports = read.csv("sports.csv")
+thriller = read.csv("thriller.csv")
+war = read.csv("war.csv")
+```
+
+```{r, echo=TRUE}
+
+# Keep only the columns that are needed 
+action <- subset(action, select = c("movie_id", "year", "rating", "votes"))
+adventure <- subset(adventure, select = c("movie_id", "year", "rating", "votes"))
+animation <- subset(animation, select = c("movie_id", "year", "rating", "votes"))
+biography <- subset(biography, select = c("movie_id", "year", "rating", "votes"))
+crime <- subset(crime, select = c("movie_id", "year", "rating", "votes"))
+family <- subset(family, select = c("movie_id", "year", "rating", "votes"))
+fantasy <- subset(fantasy, select = c("movie_id", "year", "rating", "votes"))
+noir <- subset(noir, select = c("movie_id", "year", "rating", "votes"))
+history <- subset(history, select = c("movie_id", "year", "rating", "votes"))
+horror <- subset(horror, select = c("movie_id", "year", "rating", "votes"))
+mystery <- subset(mystery, select = c("movie_id", "year", "rating", "votes"))
+romance <- subset(romance, select = c("movie_id", "year", "rating", "votes"))
+scifi <- subset(scifi, select = c("movie_id", "year", "rating", "votes"))
+sports <- subset(sports, select = c("movie_id", "year", "rating", "votes"))
+thriller <- subset(thriller, select = c("movie_id", "year", "rating", "votes"))
+war <- subset(war, select = c("movie_id", "year", "rating", "votes"))
+
+# Combine all movies into one dataset
+allmovies <- rbind(action, adventure, animation, biography, crime, 
+                   family, fantasy, noir, history, horror, 
+                   mystery, romance, scifi, sports, thriller, war)
+
+# Remove duplicate
+allmovies <- allmovies[!duplicated(allmovies$movie_id), ]
+
+# Clean year column (convert to numeric)
+allmovies$year <- as.numeric(allmovies$year)
+
+# Check what we have
+dim(allmovies)
+head(allmovies)
+summary(allmovies$year)
+summary(allmovies$rating)
+summary(allmovies$votes)
+
+
+```
+
+```{r, echo=TRUE}
+# Filtering for 2000-2023 with valid ratings and votes
+q5data <- subset(allmovies,
+                       !is.na(rating) &          
+                       !is.na(votes) &            
+                       votes > 0 &                 
+                       !is.na(year) &             
+                       year >= 2000 &               
+                       year <= 2023)                
+
+summary(q5data)
+
+```
+
+```{r, echo=TRUE}
+# Creating the vote groups based on the quartiles 
+q5data$groups[q5data$votes <= 32] <- 1
+q5data$groups[q5data$votes > 32] <- 2    
+q5data$groups[q5data$votes > 155] <- 3    
+q5data$groups[q5data$votes > 947] <- 4  
+# Make it a factor for plots
+q5data$groups <- factor(q5data$groups,levels = 1:4,labels = c("Lowest Votes", "Low", "Medium", "High"))
+
+# Check the groups
+table(q5data$groups)
+```
+
+The boxplot shows the distribution of the four groups. The median ratings across all groups is within a small range, although the ‘Lowest Votes’ group has the highest median rating relatively. Furthermore the ‘High’ group has the highest number of outliers. 
+
+```{r, echo=TRUE}
+# Boxplot
+ggplot(q5data, aes(x = groups, y = rating, fill = groups)) +
+  geom_boxplot() +
+  labs(title = "Movie Ratings by Vote Count",
+       x = "Vote Group", y = "IMDB Rating") +
+  theme_minimal()
+```
+
+The ANOVA test results show that there are statistically significant differences, p-value (< 0.001), in the mean ratings of the four groups, and so we can infer that vote count does matter.  
+
+```{r, echo=TRUE}
+# The ANOVA test 
+q5anova <- aov(rating ~ groups, data = q5data)
+summary(q5anova)
+```
+
+To further understand the relationship between the number of votes and a movie's IMDB score, a t-test was used to compare the ‘Lowest Votes’ group (mean = 6.27) and the ‘High’ group (mean = 5.97). The results were statistically significant at the 95% confidence interval, and the groups have a difference of 0.3. We found it quite surprising that the movies with the fewest number of votes rate higher on average than the movies with the most number of votes. We deduced that movies with 32 votes or less are probably not made for mainstream consumption, and so most people watching them are probably inclined to like from the get go. 
+
+```{r, echo=TRUE}
+# Compares the lowest vs highest
+low <- subset(q5data, groups == "Lowest Votes")
+high <- subset(q5data, groups == "High")
+t.test(low$rating, high$rating)
+```
+# Concluding Remarks
+
+In conclusion, our first question examined whether there is  a difference in IMDb ratings across movie genres. We found that movie ratings vary across genres in the IMDb dataset, additionally statistical testing confirmed that these differences are significant. However, the magnitude of the differences between genres is relatively small. 
+
+Our next question looked at whether there is a difference in IMDB scores for PG and R rated movies. We found that PG rated movies tend to have slightly higher IMDb ratings than R rated movies, and statistical testing showed that this difference is significant. Although the difference in average ratings were relatively small.
+
+We then sought to understand whether there is a difference in runtime between action and history movies. We found that the Action and History movies in our dataset had very similar average runtimes, and the statistical testing did not find a significant difference between the two genres. Overall any of  observed difference in runtime is minimal
+
+Subsequently we then examined if  there is a difference in runtime between movies made before 2010 and after 2010. We found that movies released after 2010 tend to be slightly shorter on average, and statistical testing confirmed that this difference is significant. However, the overall difference in runtime was relatively small (only a few minutes).
+
+Finally, we examined how the number of votes influence a movie's IMDB score. To our surprise we found that across all 4 voting groups movies in the ‘Lowest Votes’ group  rate higher on average. It became clear that more votes does not directly translate to better ratings. 
