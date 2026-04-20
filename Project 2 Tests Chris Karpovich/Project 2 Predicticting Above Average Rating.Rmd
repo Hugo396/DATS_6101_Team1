@@ -97,6 +97,8 @@ allmovies = rbind(action, adventure, animation, biography, crime, family, fantas
 allmovies$year = as.numeric(allmovies$year)
 allmovies$runtime = as.numeric(gsub(" min", "", allmovies$runtime))
 
+allmovies$certificate = as.factor(allmovies$certificate)
+
 allmovies = subset(allmovies, year >=2000)
 
 #Remove duplicates
@@ -106,11 +108,6 @@ allmovies = allmovies[!duplicated(allmovies$movie_id), ]
 duplicates = sum(duplicated(allmovies$movie_id))
 duplicates
 
-#Remove NA values from runtime
-allmovies = subset(allmovies, is.na(runtime) == FALSE)
-
-#Creating binary variable for highly rated movies
-allmovies$highly_rated = as.numeric(allmovies$rating >= 7.5)
 
 #Creating dummy variables for chosen genres
 allmovies$action = as.numeric(grepl("Action", allmovies$genre))
@@ -118,9 +115,63 @@ allmovies$horror = as.numeric(grepl("Horror", allmovies$genre))
 allmovies$drama = as.numeric(grepl("Drama", allmovies$genre))
 allmovies$romance = as.numeric(grepl("Romance", allmovies$genre))
 
+#Creating binary variable for highly rated movies
+allmovies$aboveavg = as.numeric(allmovies$rating >= mean(allmovies$rating, na.rm = TRUE))
+
+#I only want 4 major movie ratings
+G = subset(allmovies, certificate == "G")
+PG = subset(allmovies, certificate == "PG")
+PG13 = subset(allmovies, certificate == "PG-13")
+R = subset(allmovies, certificate == "R")
+
+
+allmovies=rbind(G, PG, PG13, R)
+allmovies$certificate = as.factor(allmovies$certificate)
+
+#Remove NA values from all variables to use
+allmovies = subset(allmovies, is.na(runtime) == FALSE)
+allmovies = subset(allmovies, is.na(certificate) == FALSE)
+allmovies = subset(allmovies, is.na(aboveavg) == FALSE)
+allmovies = subset(allmovies, is.na(year) == FALSE)
+allmovies = subset(allmovies, is.na(action) == FALSE)
+allmovies = subset(allmovies, is.na(horror) == FALSE)
+allmovies = subset(allmovies, is.na(drama) == FALSE)
+allmovies = subset(allmovies, is.na(romance) == FALSE)
+
 str(allmovies)
 ```
 
 ```{r, echo=T}
-model = glm(highly_rated ~ runtime + year + action + horror + drama + romance, data = allmovies, family = "binomial")
+#Model fitting and looking at VIF
+
+library(car)
+library(pscl)
+
+model = glm(aboveavg ~ runtime + year + certificate + action + horror + drama + romance, data = allmovies, family = "binomial")
+
+vif(model)
+pR2(model)
+
+summary(model)
+```
+```{r, echo=T}
+#Predictions
+
+aaprob = predict(model, type = "response")
+aaprediction = as.numeric(aaprob > .5)
+
+table(Predicted = aaprediction, Actual = allmovies$aboveavg)
+
+```
+
+```{r, echo=T}
+#Model Evaluation
+
+library(pROC) 
+
+allmovies$aaprob = aaprob
+h = roc(aboveavg ~ aaprob, data = allmovies)
+
+auc(h)
+plot(h)
 ```
