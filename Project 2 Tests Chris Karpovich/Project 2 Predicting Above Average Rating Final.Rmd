@@ -237,7 +237,9 @@ summary(res.bestglm$BestModels)
 unloadPkg("bestglm") 
 unloadPkg("leaps")
 ```
+
 ```{r, echo=T}
+#Adding more predictors
 allmovies$scifi = as.numeric(grepl("Sci-Fi", allmovies$genre))
 allmovies$history = as.numeric(grepl("History", allmovies$genre))
 allmovies$fantasy = as.numeric(grepl("Fantasy", allmovies$genre))
@@ -277,6 +279,7 @@ aaprediction2 = as.numeric(aaprob2 > .5)
 
 table(Predicted = aaprediction2, Actual = aafinal$aboveavg)
 ```
+
 ```{r, echo=T}
 #Accuracy
 (3937 + 4873) / (3937 + 1366 + 1460 + 4873)
