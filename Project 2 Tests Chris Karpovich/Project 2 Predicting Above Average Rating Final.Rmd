@@ -1,0 +1,300 @@
+---
+title: "Project 2 Predicting High Ratings"
+author: "Chris Karpovich"
+output:
+  html_document:
+    code_folding: show
+    number_sections: false
+    toc: yes
+    toc_depth: 3
+    toc_float: yes
+  pdf_document:
+    toc: yes
+    toc_depth: '3'
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(warning = F, message = F)
+options(scientific=T, digits = 3) 
+```
+
+
+```{r, echo=T}
+#Importing Necessary Libraries
+library(ezids)
+library(ggplot2)
+
+#Importing each .csv as data frames, grouped by genre
+action = read.csv("action.csv")  
+adventure = read.csv("adventure.csv")
+animation = read.csv("animation.csv")
+biography = read.csv("biography.csv")
+crime = read.csv("crime.csv")
+family = read.csv("family.csv")
+fantasy = read.csv("fantasy.csv")
+noir = read.csv("film-noir.csv")
+history = read.csv("history.csv")
+horror = read.csv("horror.csv")
+mystery = read.csv("mystery.csv")
+romance = read.csv("romance.csv")
+scifi = read.csv("scifi.csv")
+sports = read.csv("sports.csv")
+thriller = read.csv("thriller.csv")
+war = read.csv("war.csv")
+```
+
+```{r, echo=T}
+#Checking structure of the data frames (all should be the same as action)
+str(action)
+```
+```{r, echo=T}
+#We can remove some columns as we will not be needing them (some others are left in as we could use possibly ask more questions about them later)
+action = subset(action, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+#Showing the new structure of the data frame
+str(action)
+```
+```{r, echo=T}
+#Removing the columns for the rest of the data frames
+adventure = subset(adventure, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+animation = subset(animation, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+biography = subset(biography, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+crime = subset(crime, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+family = subset(family, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+fantasy = subset(fantasy, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+noir = subset(noir, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+history = subset(history, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+horror = subset(horror, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+mystery = subset(mystery, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+romance = subset(romance, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+scifi = subset(scifi, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+sports = subset(sports, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+thriller = subset(thriller, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+war = subset(war, select = -c(description, director, director_id, star, star_id, gross.in...))
+```
+
+```{r, echo=T}
+
+#Data Cleaning
+
+allmovies = rbind(action, adventure, animation, biography, crime, family, fantasy, noir, history, horror, mystery, romance, scifi, sports, thriller, war)
+
+allmovies$year = as.numeric(allmovies$year)
+allmovies$runtime = as.numeric(gsub(" min", "", allmovies$runtime))
+
+allmovies$certificate = as.factor(allmovies$certificate)
+
+allmovies = subset(allmovies, year >=2000)
+
+#Remove duplicates
+allmovies = allmovies[!duplicated(allmovies$movie_id), ]
+
+#Check for duplicates
+duplicates = sum(duplicated(allmovies$movie_id))
+duplicates
+
+
+#Creating dummy variables for chosen genres
+allmovies$action = as.numeric(grepl("Action", allmovies$genre))
+allmovies$horror = as.numeric(grepl("Horror", allmovies$genre))
+allmovies$drama = as.numeric(grepl("Drama", allmovies$genre))
+allmovies$romance = as.numeric(grepl("Romance", allmovies$genre))
+
+
+#I only want 4 major movie ratings
+G = subset(allmovies, certificate == "G")
+PG = subset(allmovies, certificate == "PG")
+PG13 = subset(allmovies, certificate == "PG-13")
+R = subset(allmovies, certificate == "R")
+
+
+allmovies=rbind(G, PG, PG13, R)
+allmovies$certificate = as.factor(allmovies$certificate)
+
+#Remove NA values from all variables to use
+allmovies = subset(allmovies, is.na(runtime) == FALSE)
+allmovies = subset(allmovies, is.na(certificate) == FALSE)
+allmovies = subset(allmovies, is.na(year) == FALSE)
+allmovies = subset(allmovies, is.na(action) == FALSE)
+allmovies = subset(allmovies, is.na(horror) == FALSE)
+allmovies = subset(allmovies, is.na(drama) == FALSE)
+allmovies = subset(allmovies, is.na(romance) == FALSE)
+
+#Creating binary variable for highly rated movies
+allmovies$aboveavg = as.numeric(allmovies$rating >= mean(allmovies$rating, na.rm = TRUE))
+allmovies = subset(allmovies, is.na(aboveavg) == FALSE)
+
+str(allmovies)
+```
+
+```{r, echo=T}
+#Model fitting and looking at VIF
+
+library(car)
+library(pscl)
+
+model = glm(aboveavg ~ runtime + year + certificate + action + horror + drama + romance, data = allmovies, family = "binomial")
+
+vif(model)
+pR2(model)
+
+summary(model)
+```
+```{r, echo=T}
+#Predictions
+
+aaprob = predict(model, type = "response")
+aaprediction = as.numeric(aaprob > .5)
+
+table(Predicted = aaprediction, Actual = allmovies$aboveavg)
+
+```
+```{r, echo=T}
+#Accuracy
+(3481 + 4767) / (3481 + 4767 + 1566 + 1822)
+
+#Precision
+(4767)/ (4767 + 1822)
+
+#Recall Rate
+(4767)/ (4767 + 1566)
+
+#Specificity
+(3481)/ (3481 + 1822)
+
+```
+
+```{r, echo=T}
+#Model Evaluation
+
+library(pROC) 
+
+allmovies$aaprob = aaprob
+h = roc(aboveavg ~ aaprob, data = allmovies)
+
+auc(h)
+plot(h)
+```
+
+```{r, echo=T}
+#Let's try some more variables
+
+allmovies$thriller = as.numeric(grepl("Thriller", allmovies$genre))
+allmovies$comedy = as.numeric(grepl("Comedy", allmovies$genre))
+allmovies$biography = as.numeric(grepl("Biography", allmovies$genre))
+allmovies$sports = as.numeric(grepl("Sport", allmovies$genre))
+allmovies$war = as.numeric(grepl("War", allmovies$genre))
+
+allmovies = subset(allmovies, is.na(thriller) == FALSE)
+allmovies = subset(allmovies, is.na(comedy) == FALSE)
+allmovies = subset(allmovies, is.na(biography) == FALSE)
+allmovies = subset(allmovies, is.na(sports) == FALSE)
+allmovies = subset(allmovies, is.na(war) == FALSE)
+
+#Updating dependent variable for highly rated movies
+allmovies$aboveavg = as.numeric(allmovies$rating >= mean(allmovies$rating, na.rm = TRUE))
+allmovies = subset(allmovies, is.na(aboveavg) == FALSE)
+
+#Test for best possible global model
+
+aaclean = allmovies[, c("aboveavg", "votes", "runtime", "year",  "certificate", "action", "horror", "drama" , "romance", "thriller", "comedy", "biography", "sports", "war")]
+
+aaclean$y = aaclean$"aboveavg"
+aaclean$aboveavg = NULL
+
+aaclean$y <- ifelse(aaclean$y == 1,TRUE,FALSE)
+aaclean$y = factor(aaclean$y)
+
+```
+
+```{r, echo=T}
+loadPkg("leaps")
+loadPkg("bestglm")
+
+
+res.bestglm <- bestglm(Xy = aaclean, family = binomial,
+            IC = "AIC",                 
+            method = "exhaustive")
+summary(res.bestglm)
+res.bestglm$BestModels
+summary(res.bestglm$BestModels)
+
+unloadPkg("bestglm") 
+unloadPkg("leaps")
+```
+```{r, echo=T}
+allmovies$scifi = as.numeric(grepl("Sci-Fi", allmovies$genre))
+allmovies$history = as.numeric(grepl("History", allmovies$genre))
+allmovies$fantasy = as.numeric(grepl("Fantasy", allmovies$genre))
+allmovies$crime = as.numeric(grepl("Crime", allmovies$genre))
+allmovies$mystery = as.numeric(grepl("Mystery", allmovies$genre))
+allmovies$animation = as.numeric(grepl("Animation", allmovies$genre))
+allmovies$family = as.numeric(grepl("Family", allmovies$genre))
+
+allmovies = subset(allmovies, is.na(scifi) == FALSE)
+allmovies = subset(allmovies, is.na(history) == FALSE)
+allmovies = subset(allmovies, is.na(fantasy) == FALSE)
+allmovies = subset(allmovies, is.na(crime) == FALSE)
+allmovies = subset(allmovies, is.na(mystery) == FALSE)
+allmovies = subset(allmovies, is.na(animation) == FALSE)
+allmovies = subset(allmovies, is.na(family) == FALSE)
+
+#Updating binary variable for highly rated movies again
+allmovies$aboveavg = as.numeric(allmovies$rating >= mean(allmovies$rating, na.rm = TRUE))
+allmovies = subset(allmovies, is.na(aboveavg) == FALSE)
+
+aafinal = allmovies[, c("aboveavg", "votes", "runtime", "year",  "certificate", "action", "horror", "drama" , "romance", "thriller", "comedy", "biography", "sports", "war", "scifi", "history", "fantasy", "crime", "mystery", "animation", "family")]
+```
+
+```{r, echo=T}
+model2 = glm(aboveavg ~ runtime + votes + year + action + horror + drama + romance + thriller + biography + war + scifi + history + fantasy + crime + animation, data = aafinal, family = "binomial")
+
+vif(model2)
+pR2(model2)
+
+summary(model2)
+```
+
+
+```{r, echo=T}
+aaprob2 = predict(model2, type = "response")
+aaprediction2 = as.numeric(aaprob2 > .5)
+
+table(Predicted = aaprediction2, Actual = aafinal$aboveavg)
+```
+```{r, echo=T}
+#Accuracy
+(3937 + 4873) / (3937 + 1366 + 1460 + 4873)
+
+#Precision
+(4873)/ (4873 + 1366)
+
+#Recall Rate
+(4873)/ (4873 + 1460)
+
+#Specificity
+(3937)/ (3937 + 1366)
+```
+
+```{r, echo=T}
+aafinal$aaprob2 = aaprob2
+h = roc(aboveavg ~ aaprob2, data = aafinal)
+
+auc(h)
+plot(h)
+```
