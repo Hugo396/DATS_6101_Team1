@@ -264,13 +264,13 @@ library(caret)
 set.seed(528)
 
 test = createDataPartition(aafinal$aboveavg, p =.2, list = FALSE)
-data_train = aafinal[-test,]
-data_test = aafinal[test,]
+datatrain = aafinal[-test,]
+datatest = aafinal[test,]
 
 ```
 
 ```{r, echo=T}
-model2 = glm(aboveavg ~ runtime + votes + action + horror + drama + romance + thriller + biography + war + scifi + history + fantasy + animation, data = data_train, family = "binomial")
+model2 = glm(aboveavg ~ runtime + votes + action + horror + drama + romance + thriller + biography + war + scifi + history + fantasy + animation, data = datatrain, family = "binomial")
 
 vif(model2)
 pR2(model2)
@@ -287,49 +287,82 @@ pvalue
 ```{r, echo=T}
 
 #Test
-aaprob2 = predict(model2, newdata=data_test, type = "response")
+aaprob2 = predict(model2, newdata=datatest, type = "response")
 aaprediction2 = as.numeric(aaprob2 > .5)
 
-table(Predicted = aaprediction2, Actual = data_test$aboveavg)
+table(Predicted = aaprediction2, Actual = datatest$aboveavg)
 
 #Train
-aaprob3 = predict(model2, newdata=data_train, type = "response")
+aaprob3 = predict(model2, newdata=datatrain, type = "response")
 aaprediction3 = as.numeric(aaprob3 > .5)
 
-table(Predicted = aaprediction3, Actual = data_train$aboveavg)
+table(Predicted = aaprediction3, Actual = datatrain$aboveavg)
 
 ```
 
 ```{r, echo=T}
-#Accuracy Test
+print("Accuracy Test")
 (431 + 1404) / (431 + 1404 + 123 + 370)
 
-#Accuracy Train
+print("Accuracy Train")
 (1799 + 5489) / (1799 + 5489 + 530 + 1490)
 
-#Precision Test
+print("Precision Test")
 (431)/ (431 + 123)
 
-#Precision Train
+print("Precision Train")
 (1799)/ (1799 +530)
 
-#Recall Rate Test
+print("Recall Rate Test")
 (431)/ (431 + 370)
 
-#Recall Rate Train
+print("Recall Rate Train")
 (1799)/ (1799 + 1490)
 
-#Specificity Test
+print("Specificity Test")
 (1404)/ (1404 + 123)
 
-#Specificity Train
+print("Specificity Train")
 (5489)/ (5489 + 530)
 ```
 
 ```{r, echo=T}
 
-h = roc(data_test$aboveavg ~ aaprob2, data = data_test)
+h = roc(datatest$aboveavg ~ aaprob2, data = datatest)
 
 auc(h)
 plot(h)
+```
+
+```{r, echo=T}
+library(rpart)
+library(rpart.plot)
+
+set.seed(852)
+
+treefit = rpart(aboveavg ~ runtime + votes + action + horror + drama + romance + thriller + biography + war + scifi + history + fantasy + animation, data = datatrain, method = "class", control = list(maxdepth = 4))
+
+summary(treefit)
+
+rpart.plot(treefit)
+```
+
+```{r, echo=T}
+#Test
+treeprediction = predict(treefit, newdata = datatest, type = "class")
+table(Predicted = treeprediction, Actual = datatest$aboveavg)
+
+#Train
+treeprediction2 = predict(treefit, newdata = datatrain, type = "class")
+table(Predicted = treeprediction2, Actual = datatrain$aboveavg)
+
+#Test
+cm = confusionMatrix(treeprediction, reference = as.factor(datatest$aboveavg))
+cm$overall
+cm$byClass
+
+#Train
+cm2 = confusionMatrix(treeprediction2, reference = as.factor(datatrain$aboveavg))
+cm2$overall
+cm2$byClass
 ```
