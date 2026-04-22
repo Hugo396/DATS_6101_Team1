@@ -222,7 +222,7 @@ aaclean$y = factor(aaclean$y)
 
 ```
 
-```{r, echo=T}
+```{r, eval = F}
 loadPkg("leaps")
 loadPkg("bestglm")
 
@@ -264,39 +264,77 @@ aafinal = allmovies[, c("aboveavg", "votes", "runtime", "year",  "certificate", 
 ```
 
 ```{r, echo=T}
-model2 = glm(aboveavg ~ runtime + votes + year + action + horror + drama + romance + thriller + biography + war + scifi + history + fantasy + crime + animation, data = aafinal, family = "binomial")
+#Train/Test Split
+library(caret)
+
+set.seed(528)
+
+test = createDataPartition(aafinal$aboveavg, p =.2, list = FALSE)
+data_train = aafinal[-test,]
+data_test = aafinal[test,]
+
+```
+
+```{r, echo=T}
+model2 = glm(aboveavg ~ runtime + votes + year + action + horror + drama + romance + thriller + biography + war + scifi + history + fantasy + crime + animation, data = data_train, family = "binomial")
 
 vif(model2)
 pR2(model2)
 
 summary(model2)
 ```
+```{r, eval=F}
+#Deviance
+pvalue = pchisq(16040-11450, 11635-11620, lower.tail=F)
+pvalue
 
+```
 
 ```{r, echo=T}
-aaprob2 = predict(model2, type = "response")
+
+#Test
+aaprob2 = predict(model2, newdata=data_test, type = "response")
 aaprediction2 = as.numeric(aaprob2 > .5)
 
-table(Predicted = aaprediction2, Actual = aafinal$aboveavg)
+table(Predicted = aaprediction2, Actual = data_test$aboveavg)
+
+#Train
+aaprob3 = predict(model2, newdata=data_train, type = "response")
+aaprediction3 = as.numeric(aaprob3 > .5)
+
+table(Predicted = aaprediction3, Actual = data_train$aboveavg)
+
 ```
 
 ```{r, echo=T}
-#Accuracy
-(3937 + 4873) / (3937 + 1366 + 1460 + 4873)
+#Accuracy Test
+(947 + 801) / (947 + 801 + 274 + 306)
 
-#Precision
-(4873)/ (4873 + 1366)
+#Accuracy Train
+(3956 + 3082) / (3956 + 3082 + 1114 + 1156)
 
-#Recall Rate
-(4873)/ (4873 + 1460)
+#Precision Test
+(947)/ (947 + 306)
 
-#Specificity
-(3937)/ (3937 + 1366)
+#Precision Train
+(3956)/ (3956 + 1114)
+
+#Recall Rate Test
+(947)/ (947 + 274)
+
+#Recall Rate Train
+(3956)/ (3956 + 1156)
+
+#Specificity Test
+(801)/ (801 + 306)
+
+#Specificity Train
+(3082)/ (3082 + 1114)
 ```
 
 ```{r, echo=T}
-aafinal$aaprob2 = aaprob2
-h = roc(aboveavg ~ aaprob2, data = aafinal)
+
+h = roc(data_test$aboveavg ~ aaprob2, data = data_test)
 
 auc(h)
 plot(h)
