@@ -42,7 +42,7 @@ sports <- read.csv("sports.csv")
 thriller <- read.csv("thriller.csv")
 war <- read.csv("war.csv")
 
-action$genre <- "Action"
+action$genre <- "Action" 
 adventure$genre <- "Adventure"
 animation$genre <- "Animation"
 biography$genre <- "Biography"
