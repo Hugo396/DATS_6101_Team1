@@ -1,0 +1,125 @@
+---
+title: "Project 2 Question3"
+author: "Hugo Ndizeye"
+output:
+  html_document:
+    code_folding: show
+    number_sections: false
+    toc: yes
+    toc_depth: 3
+    toc_float: yes
+  pdf_document:
+    toc: yes
+    toc_depth: '3'
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(warning = F, message = F)
+options(scientific=T, digits = 3) 
+```
+# Question 3: How does the number of votes affect movie ratings after considering genre and release year?
+```{r, echo=T}
+#Importing Necessary Libraries
+library(ezids)
+library(ggplot2)
+library(dplyr)
+library(car)
+setwd("C:/Users/hugon/Downloads")
+
+action <- read.csv("action.csv")
+adventure <- read.csv("adventure.csv")
+animation <- read.csv("animation.csv")
+biography <- read.csv("biography.csv")
+crime <- read.csv("crime.csv")
+family <- read.csv("family.csv")
+fantasy <- read.csv("fantasy.csv")
+noir <- read.csv("film-noir.csv")
+history <- read.csv("history.csv")
+horror <- read.csv("horror.csv")
+mystery <- read.csv("mystery.csv")
+romance <- read.csv("romance.csv")
+scifi <- read.csv("scifi.csv")
+sports <- read.csv("sports.csv")
+thriller <- read.csv("thriller.csv")
+war <- read.csv("war.csv")
+
+action$genre <- "Action"
+adventure$genre <- "Adventure"
+animation$genre <- "Animation"
+biography$genre <- "Biography"
+crime$genre <- "Crime"
+family$genre <- "Family"
+fantasy$genre <- "Fantasy"
+noir$genre <- "Film-Noir"
+history$genre <- "History"
+horror$genre <- "Horror"
+mystery$genre <- "Mystery"
+romance$genre <- "Romance"
+scifi$genre <- "Sci-Fi"
+sports$genre <- "Sports"
+thriller$genre <- "Thriller"
+war$genre <- "War"
+
+action <- action[, c("movie_id", "year", "rating", "votes", "genre")]
+adventure <- adventure[, c("movie_id", "year", "rating", "votes", "genre")]
+animation <- animation[, c("movie_id", "year", "rating", "votes", "genre")]
+biography <- biography[, c("movie_id", "year", "rating", "votes", "genre")]
+crime <- crime[, c("movie_id", "year", "rating", "votes", "genre")]
+family <- family[, c("movie_id", "year", "rating", "votes", "genre")]
+fantasy <- fantasy[, c("movie_id", "year", "rating", "votes", "genre")]
+noir <- noir[, c("movie_id", "year", "rating", "votes", "genre")]
+history <- history[, c("movie_id", "year", "rating", "votes", "genre")]
+horror <- horror[, c("movie_id", "year", "rating", "votes", "genre")]
+mystery <- mystery[, c("movie_id", "year", "rating", "votes", "genre")]
+romance <- romance[, c("movie_id", "year", "rating", "votes", "genre")]
+scifi <- scifi[, c("movie_id", "year", "rating", "votes", "genre")]
+sports <- sports[, c("movie_id", "year", "rating", "votes", "genre")]
+thriller <- thriller[, c("movie_id", "year", "rating", "votes", "genre")]
+war <- war[, c("movie_id", "year", "rating", "votes", "genre")]
+
+allmovies <- rbind(action, adventure, animation, biography, crime, 
+                   family, fantasy, noir, history, horror, 
+                   mystery, romance, scifi, sports, thriller, war)
+
+
+allmovies <- allmovies[!duplicated(allmovies$movie_id), ]
+
+
+allmovies$year <- as.numeric(allmovies$year)
+movies <- subset(allmovies, !is.na(rating) & !is.na(votes) & votes > 0 & 
+                 !is.na(year) & year >= 2000 & year <= 2023)
+
+movies$genre <- as.factor(movies$genre)
+
+```
+
+
+```{r, echo=T}
+
+ggplot(movies, aes(x = reorder(genre, rating, median), y = rating, fill = genre)) +
+  geom_boxplot() +
+  labs(title = "Movie Ratings by Genre", 
+       x = "", 
+       y = "IMDB Rating") +
+  theme(legend.position = "none")
+
+cor(movies[, c("rating", "votes", "year")])
+```
+
+
+```{r, echo=T}
+
+m1 <- lm(rating ~ votes, data = movies)
+summary(m1)
+
+m2 <- lm(rating ~ votes + year, data = movies)
+summary(m2)
+
+
+m3 <- lm(rating ~ votes + year + genre, data = movies)
+summary(m3)
+
+anovares <- anova(m1, m2, m3)
+anovares
+
+```
+
