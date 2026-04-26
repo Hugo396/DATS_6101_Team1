@@ -115,4 +115,79 @@ ezids::xkablevif(m3)
 anovares <- anova(m1, m2, m3)
 anovares
 ```
+```{r, echo=T}
+ggplot(movies, aes(x = reorder(genre, rating, median), y = rating, fill = genre)) +
+  geom_boxplot() +
+  labs(title = "Movie Ratings by Genre", 
+       x = "", 
+       y = "IMDB Rating") +
+  theme_minimal()
+
+cor(movies[, c("rating", "votes", "year")])
+```
+```{r, echo=T}
+m1 <- lm(rating ~ votes, data = movies)
+summary(m1)
+
+m2 <- lm(rating ~ votes + year, data = movies)
+summary(m2)
+ezids::xkablevif(m2)
+
+m3 <- lm(rating ~ votes + year + genre, data = movies)
+summary(m3)
+ezids::xkablevif(m3)
+
+anovares <- anova(m1, m2, m3)
+anovares
+```
+```{r, echo=T}
+ggplot(movies, aes(x = reorder(genre, rating, median), y = rating, fill = genre)) +
+  geom_boxplot() +
+  labs(title = "Movie Ratings by Genre", 
+       x = "", 
+       y = "IMDB Rating") +
+  theme_minimal()
+
+cor(movies[, c("rating", "votes", "year")])
+```
+```{r, echo=T}
+m1 <- lm(rating ~ votes, data = movies)
+summary(m1)
+
+m2 <- lm(rating ~ votes + year, data = movies)
+summary(m2)
+ezids::xkablevif(m2)
+
+m3 <- lm(rating ~ votes + year + genre, data = movies)
+summary(m3)
+ezids::xkablevif(m3)
+
+anovares <- anova(m1, m2, m3)
+anovares
+```
+```{r, echo=T}
+ggplot(movies, aes(x = reorder(genre, rating, median), y = rating, fill = genre)) +
+  geom_boxplot() +
+  labs(title = "Movie Ratings by Genre", 
+       x = "", 
+       y = "IMDB Rating") +
+  theme_minimal()
+
+cor(movies[, c("rating", "votes", "year")])
+```
+```{r, echo=T}
+m1 <- lm(rating ~ votes, data = movies)
+summary(m1)
+
+m2 <- lm(rating ~ votes + year, data = movies)
+summary(m2)
+ezids::xkablevif(m2)
+
+m3 <- lm(rating ~ votes + year + genre, data = movies)
+summary(m3)
+ezids::xkablevif(m3)
+
+anovares <- anova(m1, m2, m3)
+anovares
+```
 
