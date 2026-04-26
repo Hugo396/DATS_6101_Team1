@@ -19,6 +19,7 @@ knitr::opts_chunk$set(warning = F, message = F)
 options(scientific=T, digits = 3) 
 ```
 
+# Question 1: How well can we predict IMDb movies using main genre, votes, release year, runtime, and certificate?
 
 ```{r, echo=T}
 #Importing Necessary Libraries
@@ -216,4 +217,376 @@ ggplot(q1data, aes(x = reorder(main_genre, rating, median), y = rating)) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ggsave("ratings_by_main_genre.png", width = 10, height = 6)
 
+```
+
+# Q2:How well can we predict whether a movie is rated above the IMDb average (6.3) based on genre, runtime, and number of votes? 
+
+```{r, echo=T}
+#Importing Necessary Libraries
+library(ezids)
+library(ggplot2)
+library(car)
+library(pscl)
+
+#Importing each .csv as data frames, grouped by genre
+action = read.csv("action.csv")  
+adventure = read.csv("adventure.csv")
+animation = read.csv("animation.csv")
+biography = read.csv("biography.csv")
+crime = read.csv("crime.csv")
+family = read.csv("family.csv")
+fantasy = read.csv("fantasy.csv")
+noir = read.csv("film-noir.csv")
+history = read.csv("history.csv")
+horror = read.csv("horror.csv")
+mystery = read.csv("mystery.csv")
+romance = read.csv("romance.csv")
+scifi = read.csv("scifi.csv")
+sports = read.csv("sports.csv")
+thriller = read.csv("thriller.csv")
+war = read.csv("war.csv")
+```
+
+```{r, echo=T}
+#Checking structure of the data frames (all should be the same as action)
+str(action)
+```
+```{r, echo=T}
+#We can remove some columns as we will not be needing them (some others are left in as we could use possibly ask more questions about them later)
+action = subset(action, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+#Showing the new structure of the data frame
+str(action)
+```
+```{r, echo=T}
+#Removing the columns for the rest of the data frames
+adventure = subset(adventure, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+animation = subset(animation, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+biography = subset(biography, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+crime = subset(crime, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+family = subset(family, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+fantasy = subset(fantasy, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+noir = subset(noir, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+history = subset(history, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+horror = subset(horror, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+mystery = subset(mystery, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+romance = subset(romance, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+scifi = subset(scifi, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+sports = subset(sports, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+thriller = subset(thriller, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+war = subset(war, select = -c(description, director, director_id, star, star_id, gross.in...))
+```
+
+```{r, echo=T}
+
+#Data Cleaning
+
+allmovies = rbind(action, adventure, animation, biography, crime, family, fantasy, noir, history, horror, mystery, romance, scifi, sports, thriller, war)
+
+allmovies$year = as.numeric(allmovies$year)
+allmovies$runtime = as.numeric(gsub(" min", "", allmovies$runtime))
+
+allmovies$certificate = as.factor(allmovies$certificate)
+
+allmovies = subset(allmovies, year >=2000)
+
+#Remove duplicates
+allmovies = allmovies[!duplicated(allmovies$movie_id), ]
+
+#Check for duplicates
+duplicates = sum(duplicated(allmovies$movie_id))
+duplicates
+
+
+#Creating dummy variables for chosen genres
+allmovies$action = as.numeric(grepl("Action", allmovies$genre))
+allmovies$horror = as.numeric(grepl("Horror", allmovies$genre))
+allmovies$drama = as.numeric(grepl("Drama", allmovies$genre))
+allmovies$romance = as.numeric(grepl("Romance", allmovies$genre))
+
+
+#I only want 4 major movie ratings
+G = subset(allmovies, certificate == "G")
+PG = subset(allmovies, certificate == "PG")
+PG13 = subset(allmovies, certificate == "PG-13")
+R = subset(allmovies, certificate == "R")
+
+
+allmovies=rbind(G, PG, PG13, R)
+allmovies$certificate = as.factor(allmovies$certificate)
+
+#Remove NA values from all variables to use
+allmovies = subset(allmovies, is.na(runtime) == FALSE)
+allmovies = subset(allmovies, is.na(certificate) == FALSE)
+allmovies = subset(allmovies, is.na(year) == FALSE)
+allmovies = subset(allmovies, is.na(action) == FALSE)
+allmovies = subset(allmovies, is.na(horror) == FALSE)
+allmovies = subset(allmovies, is.na(drama) == FALSE)
+allmovies = subset(allmovies, is.na(romance) == FALSE)
+
+#Creating binary variable for highly rated movies
+allmovies$aboveavg = as.numeric(allmovies$rating >= 6.3)
+allmovies = subset(allmovies, is.na(aboveavg) == FALSE)
+
+str(allmovies)
+```
+
+```{r, echo=T}
+#Let's try some more variables
+
+allmovies$thriller = as.numeric(grepl("Thriller", allmovies$genre))
+allmovies$comedy = as.numeric(grepl("Comedy", allmovies$genre))
+allmovies$biography = as.numeric(grepl("Biography", allmovies$genre))
+allmovies$sports = as.numeric(grepl("Sport", allmovies$genre))
+allmovies$war = as.numeric(grepl("War", allmovies$genre))
+
+allmovies = subset(allmovies, is.na(thriller) == FALSE)
+allmovies = subset(allmovies, is.na(comedy) == FALSE)
+allmovies = subset(allmovies, is.na(biography) == FALSE)
+allmovies = subset(allmovies, is.na(sports) == FALSE)
+allmovies = subset(allmovies, is.na(war) == FALSE)
+allmovies = subset(allmovies, is.na(aboveavg) == FALSE)
+```
+
+
+```{r, echo=T}
+#Adding more predictors
+allmovies$scifi = as.numeric(grepl("Sci-Fi", allmovies$genre))
+allmovies$history = as.numeric(grepl("History", allmovies$genre))
+allmovies$fantasy = as.numeric(grepl("Fantasy", allmovies$genre))
+allmovies$crime = as.numeric(grepl("Crime", allmovies$genre))
+allmovies$mystery = as.numeric(grepl("Mystery", allmovies$genre))
+allmovies$animation = as.numeric(grepl("Animation", allmovies$genre))
+allmovies$family = as.numeric(grepl("Family", allmovies$genre))
+
+allmovies = subset(allmovies, is.na(scifi) == FALSE)
+allmovies = subset(allmovies, is.na(history) == FALSE)
+allmovies = subset(allmovies, is.na(fantasy) == FALSE)
+allmovies = subset(allmovies, is.na(crime) == FALSE)
+allmovies = subset(allmovies, is.na(mystery) == FALSE)
+allmovies = subset(allmovies, is.na(animation) == FALSE)
+allmovies = subset(allmovies, is.na(family) == FALSE)
+allmovies = subset(allmovies, is.na(aboveavg) == FALSE)
+
+aafinal = allmovies[, c("aboveavg", "votes", "runtime", "year",  "certificate", "action", "horror", "drama" , "romance", "thriller", "comedy", "biography", "sports", "war", "scifi", "history", "fantasy", "crime", "mystery", "animation", "family")]
+```
+
+```{r, echo=T}
+#Train/Test Split
+library(caret)
+library(pROC) 
+
+set.seed(528)
+
+test = createDataPartition(aafinal$aboveavg, p =.2, list = FALSE)
+datatrain = aafinal[-test,]
+datatest = aafinal[test,]
+
+```
+
+```{r, echo=T}
+#New Model
+model2 = glm(aboveavg ~ runtime + votes + action + horror + drama + romance + thriller + biography + war + scifi + history + fantasy + animation, data = datatrain, family = "binomial")
+
+vif(model2)
+pR2(model2)
+
+summary(model2)
+```
+
+```{r, echo=T}
+
+#Test
+aaprob2 = predict(model2, newdata=datatest, type = "response")
+aaprediction2 = as.numeric(aaprob2 > .5)
+
+table(Predicted = aaprediction2, Actual = datatest$aboveavg)
+
+#Train
+aaprob3 = predict(model2, newdata=datatrain, type = "response")
+aaprediction3 = as.numeric(aaprob3 > .5)
+
+table(Predicted = aaprediction3, Actual = datatrain$aboveavg)
+
+```
+
+```{r, echo=T}
+print("Accuracy Test")
+(431 + 1404) / (431 + 1404 + 123 + 370)
+
+print("Accuracy Train")
+(1799 + 5489) / (1799 + 5489 + 530 + 1490)
+
+print("Precision Test")
+(431)/ (431 + 123)
+
+print("Precision Train")
+(1799)/ (1799 +530)
+
+print("Recall Rate Test")
+(431)/ (431 + 370)
+
+print("Recall Rate Train")
+(1799)/ (1799 + 1490)
+
+print("Specificity Test")
+(1404)/ (1404 + 123)
+
+print("Specificity Train")
+(5489)/ (5489 + 530)
+```
+
+```{r, echo=T}
+
+h = roc(datatest$aboveavg ~ aaprob2, data = datatest)
+
+auc(h)
+plot(h)
+```
+
+```{r, echo=T}
+library(rpart)
+library(rpart.plot)
+
+set.seed(852)
+
+treefit = rpart(aboveavg ~ runtime + votes + action + horror + drama + romance + thriller + biography + war + scifi + history + fantasy + animation, data = datatrain, method = "class", control = list(maxdepth = 4))
+
+summary(treefit)
+
+rpart.plot(treefit)
+```
+
+```{r, echo=T}
+#Test
+treeprediction = predict(treefit, newdata = datatest, type = "class")
+table(Predicted = treeprediction, Actual = datatest$aboveavg)
+
+#Train
+treeprediction2 = predict(treefit, newdata = datatrain, type = "class")
+table(Predicted = treeprediction2, Actual = datatrain$aboveavg)
+
+#Test
+cm = confusionMatrix(treeprediction, reference = as.factor(datatest$aboveavg))
+cm$overall
+cm$byClass
+
+#Train
+cm2 = confusionMatrix(treeprediction2, reference = as.factor(datatrain$aboveavg))
+cm2$overall
+cm2$byClass
+```
+
+# Question 3: How does the number of votes affect movie ratings after considering genre and release year?
+
+```{r, echo=T}
+#Importing Necessary Libraries
+library(ezids)
+library(ggplot2)
+library(dplyr)
+library(car)
+
+action <- read.csv("action.csv")
+adventure <- read.csv("adventure.csv")
+animation <- read.csv("animation.csv")
+biography <- read.csv("biography.csv")
+crime <- read.csv("crime.csv")
+family <- read.csv("family.csv")
+fantasy <- read.csv("fantasy.csv")
+noir <- read.csv("film-noir.csv")
+history <- read.csv("history.csv")
+horror <- read.csv("horror.csv")
+mystery <- read.csv("mystery.csv")
+romance <- read.csv("romance.csv")
+scifi <- read.csv("scifi.csv")
+sports <- read.csv("sports.csv")
+thriller <- read.csv("thriller.csv")
+war <- read.csv("war.csv")
+
+action$genre <- "Action" 
+adventure$genre <- "Adventure"
+animation$genre <- "Animation"
+biography$genre <- "Biography"
+crime$genre <- "Crime"
+family$genre <- "Family"
+fantasy$genre <- "Fantasy"
+noir$genre <- "Film-Noir"
+history$genre <- "History"
+horror$genre <- "Horror"
+mystery$genre <- "Mystery"
+romance$genre <- "Romance"
+scifi$genre <- "Sci-Fi"
+sports$genre <- "Sports"
+thriller$genre <- "Thriller"
+war$genre <- "War"
+
+action <- action[, c("movie_id", "year", "rating", "votes", "genre")]
+adventure <- adventure[, c("movie_id", "year", "rating", "votes", "genre")]
+animation <- animation[, c("movie_id", "year", "rating", "votes", "genre")]
+biography <- biography[, c("movie_id", "year", "rating", "votes", "genre")]
+crime <- crime[, c("movie_id", "year", "rating", "votes", "genre")]
+family <- family[, c("movie_id", "year", "rating", "votes", "genre")]
+fantasy <- fantasy[, c("movie_id", "year", "rating", "votes", "genre")]
+noir <- noir[, c("movie_id", "year", "rating", "votes", "genre")]
+history <- history[, c("movie_id", "year", "rating", "votes", "genre")]
+horror <- horror[, c("movie_id", "year", "rating", "votes", "genre")]
+mystery <- mystery[, c("movie_id", "year", "rating", "votes", "genre")]
+romance <- romance[, c("movie_id", "year", "rating", "votes", "genre")]
+scifi <- scifi[, c("movie_id", "year", "rating", "votes", "genre")]
+sports <- sports[, c("movie_id", "year", "rating", "votes", "genre")]
+thriller <- thriller[, c("movie_id", "year", "rating", "votes", "genre")]
+war <- war[, c("movie_id", "year", "rating", "votes", "genre")]
+
+allmovies <- rbind(action, adventure, animation, biography, crime, 
+                   family, fantasy, noir, history, horror, 
+                   mystery, romance, scifi, sports, thriller, war)
+
+
+allmovies <- allmovies[!duplicated(allmovies$movie_id), ]
+
+allmovies$year <- as.numeric(allmovies$year)
+movies <- subset(allmovies, !is.na(rating) & !is.na(votes) & votes > 0 & 
+                 !is.na(year) & year >= 2000 & year <= 2023)
+
+movies$genre <- as.factor(movies$genre)
+
+```
+
+```{r, echo=T}
+
+ggplot(movies, aes(x = reorder(genre, rating, median), y = rating, fill = genre)) +
+  geom_boxplot() +
+  labs(title = "Movie Ratings by Genre", 
+       x = "", 
+       y = "IMDB Rating") +
+  theme(legend.position = "none")
+
+cor(movies[, c("rating", "votes", "year")])
+```
+```{r, echo=T}
+m1 <- lm(rating ~ votes, data = movies)
+summary(m1)
+
+m2 <- lm(rating ~ votes + year, data = movies)
+summary(m2)
+
+m3 <- lm(rating ~ votes + year + genre, data = movies)
+summary(m3)
+
+anovares <- anova(m1, m2, m3)
+anovares
 ```
