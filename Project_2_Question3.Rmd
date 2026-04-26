@@ -97,7 +97,7 @@ ggplot(movies, aes(x = reorder(genre, rating, median), y = rating, fill = genre)
   labs(title = "Movie Ratings by Genre", 
        x = "", 
        y = "IMDB Rating") +
-  
+  theme_minimal()
 
 cor(movies[, c("rating", "votes", "year")])
 ```
