@@ -110,6 +110,7 @@ summary(m2)
 
 m3 <- lm(rating ~ votes + year + genre, data = movies)
 summary(m3)
+ezids::xkablevif(m3)
 
 anovares <- anova(m1, m2, m3)
 anovares
