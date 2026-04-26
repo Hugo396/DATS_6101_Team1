@@ -107,6 +107,7 @@ summary(m1)
 
 m2 <- lm(rating ~ votes + year, data = movies)
 summary(m2)
+ezids::xkablevif(m2)
 
 m3 <- lm(rating ~ votes + year + genre, data = movies)
 summary(m3)
