@@ -1,0 +1,219 @@
+---
+title: "Final Project EDA"
+author: "Team 1"
+output:
+  html_document:
+    code_folding: show
+    number_sections: false
+    toc: yes
+    toc_depth: 3
+    toc_float: yes
+  pdf_document:
+    toc: yes
+    toc_depth: '3'
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(warning = F, message = F)
+options(scientific=T, digits = 3) 
+```
+
+
+```{r, echo=T}
+#Importing Necessary Libraries
+library(ezids)
+library(ggplot2)
+
+#Importing each .csv as data frames, grouped by genre
+action = read.csv("action.csv")  
+adventure = read.csv("adventure.csv")
+animation = read.csv("animation.csv")
+biography = read.csv("biography.csv")
+crime = read.csv("crime.csv")
+family = read.csv("family.csv")
+fantasy = read.csv("fantasy.csv")
+noir = read.csv("film-noir.csv")
+history = read.csv("history.csv")
+horror = read.csv("horror.csv")
+mystery = read.csv("mystery.csv")
+romance = read.csv("romance.csv")
+scifi = read.csv("scifi.csv")
+sports = read.csv("sports.csv")
+thriller = read.csv("thriller.csv")
+war = read.csv("war.csv")
+```
+
+```{r, echo=T}
+#Checking structure of the data frames (all should be the same as action)
+str(action)
+```
+
+```{r, echo=T}
+#We can remove some columns as we will not be needing them (some others are left in as we could use possibly ask more questions about them later)
+action = subset(action, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+#Showing the new structire of the data frame
+str(action)
+```
+
+```{r, echo=T}
+#Removing the columns for the rest of the data frames
+adventure = subset(adventure, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+animation = subset(animation, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+biography = subset(biography, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+crime = subset(crime, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+family = subset(family, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+fantasy = subset(fantasy, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+noir = subset(noir, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+history = subset(history, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+horror = subset(horror, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+mystery = subset(mystery, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+romance = subset(romance, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+scifi = subset(scifi, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+sports = subset(sports, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+thriller = subset(thriller, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+war = subset(war, select = -c(description, director, director_id, star, star_id, gross.in...))
+```
+
+```{r, echo=T}
+#Combining all the data frames and removing duplicates, we can still use the data frames above for analysis, however.  Both methods are valid depending on our questions and eda.
+allmovies = rbind(action, adventure, animation, biography, crime, family, fantasy, noir, history, horror, mystery, romance, scifi, sports, thriller, war)
+
+#Remove duplicates
+allmovies <- allmovies[!duplicated(allmovies$movie_id), ]
+
+#Check for duplicates
+duplicates = sum(duplicated(allmovies))
+duplicates
+```
+
+```{r, echo=T}
+allmovies$year <- as.numeric(allmovies$year)
+str(allmovies)
+```
+
+```{r, echo=T}
+# For Q1, we prepared a cleaned dataset using variables relevant to rating prediction.
+# We kept movies released between 2000 and 2023 and removed rows with missing values.
+
+allmovies$year_num <- as.numeric(allmovies$year)
+allmovies$runtime_num <- as.numeric(sub(" min", "", allmovies$runtime))
+
+q1data <- subset(allmovies,
+  !is.na(rating) &
+  !is.na(votes) &
+  !is.na(year_num) &
+  !is.na(runtime_num) &
+  !is.na(certificate) &
+  year_num >= 2000 &
+  year_num <= 2023
+)
+
+q1data$main_genre <- sub(",.*", "", q1data$genre)
+q1data$main_genre <- as.factor(trimws(q1data$main_genre))
+q1data$certificate <- as.factor(q1data$certificate)
+
+str(q1data)
+summary(q1data)
+```
+
+```{r, echo=T}
+# The number of votes is highly skewed, so we apply a log transformation.
+q1data$log_votes <- log(q1data$votes + 1)
+
+# Remove unrealistic runtime outliers
+q1data <- subset(q1data, runtime_num >= 40 & runtime_num <= 240)
+
+summary(q1data$log_votes)
+summary(q1data$runtime_num)
+
+# Compare several linear regression models for Q1
+m1 <- lm(rating ~ main_genre + log_votes + year_num, data = q1data)
+m2 <- lm(rating ~ main_genre + log_votes + year_num + runtime_num, data = q1data)
+m3 <- lm(rating ~ main_genre + log_votes + year_num + runtime_num + certificate, data = q1data)
+
+summary(m1)$r.squared
+summary(m2)$r.squared
+summary(m3)$r.squared
+
+# Final model for Q1
+model_final <- m3
+summary(model_final)
+```
+
+```{r, echo=T}
+# Create predicted ratings from the final linear regression model
+q1data$pred_rating <- predict(model_final)
+
+# Create a random sample for cleaner scatterplots
+set.seed(123)
+sample_q1 <- q1data[sample(nrow(q1data), 5000), ]
+
+ggplot(sample_q1, aes(x = pred_rating, y = rating)) +
+  geom_point(alpha = 0.2) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed") +
+  labs(title = "Predicted vs Actual Ratings (Sample of 5,000 Movies)",
+       x = "Predicted Rating",
+       y = "Actual Rating") +
+  geom_smooth(method = "lm", color = "blue", se = FALSE)
+  theme_minimal()
+
+ggsave("predicted_vs_actual_sample.png", width = 8, height = 6)
+
+```
+
+```{r, echo=T}
+# Create vote groups based on quintiles of log-transformed votes
+q1data$vote_group <- cut(
+  q1data$log_votes,
+  breaks = quantile(q1data$log_votes, probs = seq(0, 1, 0.2), na.rm = TRUE),
+  include.lowest = TRUE
+)
+
+# Calculate average rating by vote group
+vote_summary <- aggregate(rating ~ vote_group, data = q1data, mean)
+
+ggplot(vote_summary, aes(x = vote_group, y = rating, group = 1)) +
+  geom_point(size = 3) +
+  geom_line() +
+  labs(title = "Average Rating by Vote Group",
+       x = "Log(Votes) Group",
+       y = "Average Rating") +
+  theme_minimal()
+
+ggsave("average_rating_by_vote_group.png", width = 8, height = 6)
+
+ggplot(q1data, aes(x = log_votes, y = rating)) +
+  geom_point(alpha = 0.05) +
+  geom_smooth(method = "lm") +
+  theme_minimal()
+```
+
+```{r, echo=T}
+ggplot(q1data, aes(x = reorder(main_genre, rating, median), y = rating)) +
+  geom_boxplot() +
+  labs(title = "Movie Ratings by Main Genre",
+       x = "Main Genre",
+       y = "Rating") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  stat_summary(fun = median, geom = "point", color = "red", size = 2)
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+ggsave("ratings_by_main_genre.png", width = 10, height = 6)
+
+```
