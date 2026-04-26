@@ -91,7 +91,6 @@ movies$genre <- as.factor(movies$genre)
 
 ```
 ```{r, echo=T}
-
 ggplot(movies, aes(x = reorder(genre, rating, median), y = rating, fill = genre)) +
   geom_boxplot() +
   labs(title = "Movie Ratings by Genre", 
