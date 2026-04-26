@@ -143,55 +143,6 @@ str(allmovies)
 ```
 
 ```{r, echo=T}
-#Model fitting and looking at VIF
-
-library(car)
-library(pscl)
-
-model = glm(aboveavg ~ runtime + year + certificate + action + horror + drama + romance, data = allmovies, family = "binomial")
-
-vif(model)
-pR2(model)
-
-summary(model)
-```
-```{r, echo=T}
-#Predictions
-
-aaprob = predict(model, type = "response")
-aaprediction = as.numeric(aaprob > .5)
-
-table(Predicted = aaprediction, Actual = allmovies$aboveavg)
-
-```
-```{r, echo=T}
-#Accuracy
-(3481 + 4767) / (3481 + 4767 + 1566 + 1822)
-
-#Precision
-(4767)/ (4767 + 1822)
-
-#Recall Rate
-(4767)/ (4767 + 1566)
-
-#Specificity
-(3481)/ (3481 + 1822)
-
-```
-
-```{r, echo=T}
-#Model Evaluation
-
-library(pROC) 
-
-allmovies$aaprob = aaprob
-h = roc(aboveavg ~ aaprob, data = allmovies)
-
-auc(h)
-plot(h)
-```
-
-```{r, echo=T}
 #Let's try some more variables
 
 allmovies$thriller = as.numeric(grepl("Thriller", allmovies$genre))
@@ -206,34 +157,8 @@ allmovies = subset(allmovies, is.na(biography) == FALSE)
 allmovies = subset(allmovies, is.na(sports) == FALSE)
 allmovies = subset(allmovies, is.na(war) == FALSE)
 allmovies = subset(allmovies, is.na(aboveavg) == FALSE)
-
-#Test for best possible global model
-
-aaclean = allmovies[, c("aboveavg", "votes", "runtime", "year",  "certificate", "action", "horror", "drama" , "romance", "thriller", "comedy", "biography", "sports", "war")]
-
-aaclean$y = aaclean$"aboveavg"
-aaclean$aboveavg = NULL
-
-aaclean$y <- ifelse(aaclean$y == 1,TRUE,FALSE)
-aaclean$y = factor(aaclean$y)
-
 ```
 
-```{r, eval = F}
-loadPkg("leaps")
-loadPkg("bestglm")
-
-
-res.bestglm <- bestglm(Xy = aaclean, family = binomial,
-            IC = "AIC",                 
-            method = "exhaustive")
-summary(res.bestglm)
-res.bestglm$BestModels
-summary(res.bestglm$BestModels)
-
-unloadPkg("bestglm") 
-unloadPkg("leaps")
-```
 
 ```{r, echo=T}
 #Adding more predictors
@@ -260,6 +185,7 @@ aafinal = allmovies[, c("aboveavg", "votes", "runtime", "year",  "certificate", 
 ```{r, echo=T}
 #Train/Test Split
 library(caret)
+library(pROC) 
 
 set.seed(528)
 
@@ -270,18 +196,13 @@ datatest = aafinal[test,]
 ```
 
 ```{r, echo=T}
+#New Model
 model2 = glm(aboveavg ~ runtime + votes + action + horror + drama + romance + thriller + biography + war + scifi + history + fantasy + animation, data = datatrain, family = "binomial")
 
 vif(model2)
 pR2(model2)
 
 summary(model2)
-```
-```{r, eval=F}
-#Deviance
-pvalue = pchisq(12091-8723.1, 9307 - 9294, lower.tail=F)
-pvalue
-
 ```
 
 ```{r, echo=T}
