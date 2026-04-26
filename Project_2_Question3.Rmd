@@ -83,7 +83,6 @@ allmovies <- rbind(action, adventure, animation, biography, crime,
 
 allmovies <- allmovies[!duplicated(allmovies$movie_id), ]
 
-
 allmovies$year <- as.numeric(allmovies$year)
 movies <- subset(allmovies, !is.na(rating) & !is.na(votes) & votes > 0 & 
                  !is.na(year) & year >= 2000 & year <= 2023)
