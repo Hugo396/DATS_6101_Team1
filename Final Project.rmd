@@ -481,6 +481,7 @@ Looking at the prediction metrics on the test data, we see an accuracy of 78.8%,
 Comparing the results for both the logistic regression and the classification tree, we can conclude that both models reliably predict whether a movie is above or below average (6.3 rated) on IMDb.  While both models are accurate, each one has their drawbacks or tradeoffs from the other. Determining which model is better to use depends on if you want to minimize false negatives or minimize false positives.  The logistic model predicted more false negatives, while the classification tree predicted more false positives.  Regardless, both of these models met the criteria necessary to answer our question.  Yes, we can reliably predict if a movie was rated above or below average on IMDb using genre, runtime, and number of votes.
 
 # Question 3: How does the number of votes affect movie ratings after considering genre and release year?
+Our third question is all about inference. We examine how the number of votes a movie receives affects its IMDB rating, while accounting for the movie's release year and genre. The first step was visualizing how ratings differ across genres. The boxplot below shows that some genres consistently rate higher than others. Biography and Animation movies tend to have higher median ratings, while Horror movies have noticeably lower ratings. This variation in ratings by genre was a clear indication that we had to control for it. Additionally the correlation matrix below reveals that rating, votes, and year all have very weak relationships with each other. Rating and votes only have a correlation of 0.12, meaning votes alone do not predict ratings very well. 
 
 ```{r, echo=T}
 #Importing Necessary Libraries
@@ -567,21 +568,31 @@ ggplot(movies, aes(x = reorder(genre, rating, median), y = rating, fill = genre)
 cor(movies[, c("rating", "votes", "year")])
 ```
 
+We built three linear regression models starting simple and adding then increasing the number of regressors, model 1 only used votes as a regressor. Model 2 added the release year as a regressor,  and model 3 added the genres as a regressor. We ensured that there was no multicollinearity by checking the VIF values for model 2 and 3, and used ANOVA to compare and assess the models in order to determine whether adding each new variable significantly improved the model.
 
 ```{r, echo=T}
-
 m1 <- lm(rating ~ votes, data = movies)
 summary(m1)
+```
+Model 1 shows that votes alone have a statistically significant effect on ratings (p <  2e-16), although  the effect is very small. The coefficient for votes is 0.00000327, this means that every additional 300,000 votes a movie receives its rating increases by 1 point. The R-squared is only 0.0145 so votes explain less than 1.5% of the variation in ratings.
 
+```{r, echo=T}
 m2 <- lm(rating ~ votes + year, data = movies)
 summary(m2)
 ezids::xkablevif(m2)
+```
+Model 2 adds release year as a regressor and it is statistically significant (p = 9.4e-10) with a coefficient of 0.00534. So this means that every additional year you go up from 2000, the rating goes up by about 0.005 points. The votes coefficient barely moved from Model 1, and the R-squared only bumped up to 0.015. So the release year explains very little. The VIF values came in under 5, so multicollinearity is not a problem.
 
+```{r, echo=T}
 m3 <- lm(rating ~ votes + year + genre, data = movies)
 summary(m3)
 ezids::xkablevif(m3)
+```
+Model 3 adds genres and the R-squared increases to 0.112. This means that genre alone explains around 10% of rating variation that votes and year could not. Compared to action movies, biography movies are rated 0.926 points higher, animation movies are rated 0.624 points higher, and horror movies are rated 0.776 points lower. The effect of votes remains very small at 0.00000324, and the same goes for year, which is at 0.0096 per year. The VIF values are all low, so no multicollinearity. Furthermore the ANOVA test below confirms that model 3 is significantly better than both model 1 and model 2 (p <  2e-16).
 
+```{r, echo=T}
 anovares <- anova(m1, m2, m3)
 anovares
 
 ```
+Overall the effects that votes and year have on ratings are statistically significant but practically meaningless. The unexpected realization is that a movie's genre tells us much more about its likely rating than how many votes it received or even when it came out. Our third model only explains 11.2% of rating variation, and so about 88.8% of why movies get certain ratings remains unexplained. Other factors like budget, director, lead actors, and marketing likely matter a lot. Nevertheless the number of votes does affect movie ratings, but the effect is so small it barely matters. A movie would need hundreds of thousands of extra votes to move its rating by even one point. Genre and other unmeasured factors are more significant determinants of ratings. 
