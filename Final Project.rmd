@@ -219,7 +219,8 @@ ggsave("ratings_by_main_genre.png", width = 10, height = 6)
 
 ```
 
-# Q2:How well can we predict whether a movie is rated above the IMDb average (6.3) based on genre, runtime, and number of votes? 
+# Question 2: How well can we predict whether a movie is rated above the IMDb average (6.3) based on genre, runtime, and number of votes? 
+For question 2, we wanted to see how well we could predict if a movie was rated above or below average on IMDb.  To do this, we used the predictors of genre, runtime, and number of votes.  The binary response variable was whether or not the movie was rated 6.3 or higher, which is the average movie rating on IMDb's website.  This response variable was fixed at 6.3 rather than calculated using our sample as while completing EDA and model building, the mean value would change slightly.  It just made more sense to fix the value at 6.3 and predict based on that.  However, before beginning model selection, some data cleaning was required.
 
 ```{r, echo=T}
 #Importing Necessary Libraries
@@ -317,6 +318,18 @@ allmovies$action = as.numeric(grepl("Action", allmovies$genre))
 allmovies$horror = as.numeric(grepl("Horror", allmovies$genre))
 allmovies$drama = as.numeric(grepl("Drama", allmovies$genre))
 allmovies$romance = as.numeric(grepl("Romance", allmovies$genre))
+allmovies$thriller = as.numeric(grepl("Thriller", allmovies$genre))
+allmovies$comedy = as.numeric(grepl("Comedy", allmovies$genre))
+allmovies$biography = as.numeric(grepl("Biography", allmovies$genre))
+allmovies$sports = as.numeric(grepl("Sport", allmovies$genre))
+allmovies$war = as.numeric(grepl("War", allmovies$genre))
+allmovies$scifi = as.numeric(grepl("Sci-Fi", allmovies$genre))
+allmovies$history = as.numeric(grepl("History", allmovies$genre))
+allmovies$fantasy = as.numeric(grepl("Fantasy", allmovies$genre))
+allmovies$crime = as.numeric(grepl("Crime", allmovies$genre))
+allmovies$mystery = as.numeric(grepl("Mystery", allmovies$genre))
+allmovies$animation = as.numeric(grepl("Animation", allmovies$genre))
+allmovies$family = as.numeric(grepl("Family", allmovies$genre))
 
 
 #I only want 4 major movie ratings
@@ -337,42 +350,11 @@ allmovies = subset(allmovies, is.na(action) == FALSE)
 allmovies = subset(allmovies, is.na(horror) == FALSE)
 allmovies = subset(allmovies, is.na(drama) == FALSE)
 allmovies = subset(allmovies, is.na(romance) == FALSE)
-
-#Creating binary variable for highly rated movies
-allmovies$aboveavg = as.numeric(allmovies$rating >= 6.3)
-allmovies = subset(allmovies, is.na(aboveavg) == FALSE)
-
-str(allmovies)
-```
-
-```{r, echo=T}
-#Let's try some more variables
-
-allmovies$thriller = as.numeric(grepl("Thriller", allmovies$genre))
-allmovies$comedy = as.numeric(grepl("Comedy", allmovies$genre))
-allmovies$biography = as.numeric(grepl("Biography", allmovies$genre))
-allmovies$sports = as.numeric(grepl("Sport", allmovies$genre))
-allmovies$war = as.numeric(grepl("War", allmovies$genre))
-
 allmovies = subset(allmovies, is.na(thriller) == FALSE)
 allmovies = subset(allmovies, is.na(comedy) == FALSE)
 allmovies = subset(allmovies, is.na(biography) == FALSE)
 allmovies = subset(allmovies, is.na(sports) == FALSE)
 allmovies = subset(allmovies, is.na(war) == FALSE)
-allmovies = subset(allmovies, is.na(aboveavg) == FALSE)
-```
-
-
-```{r, echo=T}
-#Adding more predictors
-allmovies$scifi = as.numeric(grepl("Sci-Fi", allmovies$genre))
-allmovies$history = as.numeric(grepl("History", allmovies$genre))
-allmovies$fantasy = as.numeric(grepl("Fantasy", allmovies$genre))
-allmovies$crime = as.numeric(grepl("Crime", allmovies$genre))
-allmovies$mystery = as.numeric(grepl("Mystery", allmovies$genre))
-allmovies$animation = as.numeric(grepl("Animation", allmovies$genre))
-allmovies$family = as.numeric(grepl("Family", allmovies$genre))
-
 allmovies = subset(allmovies, is.na(scifi) == FALSE)
 allmovies = subset(allmovies, is.na(history) == FALSE)
 allmovies = subset(allmovies, is.na(fantasy) == FALSE)
@@ -380,10 +362,16 @@ allmovies = subset(allmovies, is.na(crime) == FALSE)
 allmovies = subset(allmovies, is.na(mystery) == FALSE)
 allmovies = subset(allmovies, is.na(animation) == FALSE)
 allmovies = subset(allmovies, is.na(family) == FALSE)
+
+
+#Creating binary variable for highly rated movies
+allmovies$aboveavg = as.numeric(allmovies$rating >= 6.3)
 allmovies = subset(allmovies, is.na(aboveavg) == FALSE)
 
+#Final DF
 aafinal = allmovies[, c("aboveavg", "votes", "runtime", "year",  "certificate", "action", "horror", "drama" , "romance", "thriller", "comedy", "biography", "sports", "war", "scifi", "history", "fantasy", "crime", "mystery", "animation", "family")]
 ```
+First, any missing or NA values were removed.  This included any missing values for my key variables of runtime, ratings, and genres.  I also removed any duplicate movies from the dataset, as we had combined multiple CSV files into one dataframe that originally contained multiple duplicates. Another step was that I only included movies that were rated G, PG, PG13, and R as I wanted to explore using those as predictors.  Other ratings were too imbalanced in sample size or were uninterpretable with too many sparse categories.   Once the basic data cleaning was completed, I created dummy variables to indicate the genres that a movie belonged to.  For example, if a movie was action and horror, the values for the “action” and “horror” variables would be 1.  This was completed for all genres that I wanted to test for and experiment with for model selection.  
 
 ```{r, echo=T}
 #Train/Test Split
@@ -396,9 +384,6 @@ test = createDataPartition(aafinal$aboveavg, p =.2, list = FALSE)
 datatrain = aafinal[-test,]
 datatest = aafinal[test,]
 
-```
-
-```{r, echo=T}
 #New Model
 model2 = glm(aboveavg ~ runtime + votes + action + horror + drama + romance + thriller + biography + war + scifi + history + fantasy + animation, data = datatrain, family = "binomial")
 
@@ -407,7 +392,7 @@ pR2(model2)
 
 summary(model2)
 ```
-
+After the data cleaning, I can begin selecting my model.  Given the binary response variable, logistic regression and a classification tree were chosen to be my methods.  I also wanted to do a 80/20 train/test split, meaning my model would be trained on 80% of our sample data and would predict 20% of the data which was new to the model.  Stratified sampling was used for this to keep classification balance intact. This methodology was chosen as I wanted to test the models accuracy on unseen data and compare it to the seen data as well.  In order to choose what predictor variables I wanted in the model, I first ran the model with all my chosen genres to see how it performed.  Upon running the first iteration, I noticed that certain genres contained very few movies.  Genres like “comedy” and “sports” had very small group sizes, so I removed them from the data.  I also removed some predictors like “crime” which also had a small sample size.  Removing the certificate predictor, or age rating, also improved the model which surprised me.  This helped reduce AIC, produced the AUC above .8, had VIFs all between 1 and 1.37, saw a pseudo R-squared value of .274 (good model fit), and provided the best accuracy between train and test sets.  Through fine tuning the model, I settled on my final model formula (aboveavg ~ runtime + votes + action + horror + drama + romance + thriller + biography + war + scifi + history + fantasy + animation, family).  Through my testing, this formula produced the most stable and accurate results, which for my predictive question were exactly what I was looking for in the model.  Let’s further examine the prediction results of my final model.
 ```{r, echo=T}
 
 #Test
@@ -457,6 +442,7 @@ h = roc(datatest$aboveavg ~ aaprob2, data = datatest)
 auc(h)
 plot(h)
 ```
+The predictions on the unseen data were relatively solid, showing an accuracy of 78.8%, a noticeable increase in accuracy from just guessing the more popular classification.  The AUC ended up at .837, which is above the .8 threshold that we look for, meaning the model was strong at distinguishing between classes. The ROC curve followed the trajectory that we expect from a good model, meaning it is much better at prediction than any sort of random guessing. The precision was 77.8%, meaning the model had solid accuracy when it predicted a movie to be above 6.3 rated.  However, the recall rate was 53.8%, which meant the model was not fantastic at catching movies above 6.3, though when it did predict over 6.3 it was relatively accurate as shown by the precision.  The specificity was 91.9%, meaning that the model was great at predicting movies rated below 6.3.  I also predicted the training data to see if the model was possibly overfitting.  However, all metrics were similar across the test and train data, and no performance drop was noticeable.  This suggests that the model is not overfitting and can be a reliable predictor for whether or not a movie is rated above or below 6.3 on IMDb.
 
 ```{r, echo=T}
 library(rpart)
@@ -470,7 +456,7 @@ summary(treefit)
 
 rpart.plot(treefit)
 ```
-
+With the logistic regression completed, I also wanted to try a decision/classification tree to possibly uncover any other patterns.  The same formula and 80/20 train/test split were used, and a max of 4 levels of feature splits were implemented  to minimize overfitting and variance..  Looking at the tree, we can see that the features  chosen for the splits were number of votes, runtime, whether the movie was a drama, and whether the movie was an animated movie.  Let’s examine the predictive power of the classification tree.
 ```{r, echo=T}
 #Test
 treeprediction = predict(treefit, newdata = datatest, type = "class")
@@ -490,6 +476,9 @@ cm2 = confusionMatrix(treeprediction2, reference = as.factor(datatrain$aboveavg)
 cm2$overall
 cm2$byClass
 ```
+Looking at the prediction metrics on the test data, we see an accuracy of 78.8%, indicating again good overall predictive performance.  The precision was 79.6%, showing that the model had good accuracy on the movies it predicted to be above 6.3. The recall rate was 91%, showing that it was catching most of the above average movies.  However, this time the specificity was relatively lower at 55.6%, meaning the model was not great at catching movies rated below 6.3%. Let’s again compare the test and training prediction metrics. Looking at the results, we see very similar results with no performance drop, suggesting that the model is not overfitting. 
+
+Comparing the results for both the logistic regression and the classification tree, we can conclude that both models reliably predict whether a movie is above or below average (6.3 rated) on IMDb.  While both models are accurate, each one has their drawbacks or tradeoffs from the other. Determining which model is better to use depends on if you want to minimize false negatives or minimize false positives.  The logistic model predicted more false negatives, while the classification tree predicted more false positives.  Regardless, both of these models met the criteria necessary to answer our question.  Yes, we can reliably predict if a movie was rated above or below average on IMDb using genre, runtime, and number of votes.
 
 # Question 3: How does the number of votes affect movie ratings after considering genre and release year?
 
