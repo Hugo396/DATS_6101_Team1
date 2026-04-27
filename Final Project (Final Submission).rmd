@@ -1,0 +1,641 @@
+---
+title: "Final Project"
+author: "Team 1"
+output:
+  html_document:
+    code_folding: show
+    number_sections: false
+    toc: yes
+    toc_depth: 3
+    toc_float: yes
+  pdf_document:
+    toc: yes
+    toc_depth: '3'
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(warning = F, message = F)
+options(scientific=T, digits = 3) 
+```
+
+# Question 1: How well can we predict IMDb movies using main genre, votes, release year, runtime, and certificate?
+For the first part of the project, we wanted to see how well we can predict IMDb movie ratings using a few basic features. Specifically, we focused on genre, number of votes, release year, runtime, and certificate rating. The main goal here was not just to build a predictive model, but to understand whether these commonly available features can meaningfully explain variation in movie ratings.
+
+```{r, echo=T}
+#Importing Necessary Libraries
+library(ezids)
+library(ggplot2)
+
+#Importing each .csv as data frames, grouped by genre
+action = read.csv("action.csv")  
+adventure = read.csv("adventure.csv")
+animation = read.csv("animation.csv")
+biography = read.csv("biography.csv")
+crime = read.csv("crime.csv")
+family = read.csv("family.csv")
+fantasy = read.csv("fantasy.csv")
+noir = read.csv("film-noir.csv")
+history = read.csv("history.csv")
+horror = read.csv("horror.csv")
+mystery = read.csv("mystery.csv")
+romance = read.csv("romance.csv")
+scifi = read.csv("scifi.csv")
+sports = read.csv("sports.csv")
+thriller = read.csv("thriller.csv")
+war = read.csv("war.csv")
+```
+
+```{r, echo=T}
+#Checking structure of the data frames (all should be the same as action)
+str(action)
+```
+
+```{r, echo=T}
+#We can remove some columns as we will not be needing them (some others are left in as we could use possibly ask more questions about them later)
+action = subset(action, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+#Showing the new structire of the data frame
+str(action)
+```
+
+```{r, echo=T}
+#Removing the columns for the rest of the data frames
+adventure = subset(adventure, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+animation = subset(animation, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+biography = subset(biography, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+crime = subset(crime, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+family = subset(family, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+fantasy = subset(fantasy, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+noir = subset(noir, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+history = subset(history, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+horror = subset(horror, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+mystery = subset(mystery, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+romance = subset(romance, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+scifi = subset(scifi, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+sports = subset(sports, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+thriller = subset(thriller, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+war = subset(war, select = -c(description, director, director_id, star, star_id, gross.in...))
+```
+
+```{r, echo=T}
+#Combining all the data frames and removing duplicates, we can still use the data frames above for analysis, however.  Both methods are valid depending on our questions and eda.
+allmovies = rbind(action, adventure, animation, biography, crime, family, fantasy, noir, history, horror, mystery, romance, scifi, sports, thriller, war)
+
+#Remove duplicates
+allmovies <- allmovies[!duplicated(allmovies$movie_id), ]
+
+#Check for duplicates
+duplicates = sum(duplicated(allmovies))
+duplicates
+```
+
+```{r, echo=T}
+allmovies$year <- as.numeric(allmovies$year)
+str(allmovies)
+```
+
+```{r, echo=T}
+# For Q1, we prepared a cleaned dataset using variables relevant to rating prediction.
+# We kept movies released between 2000 and 2023 and removed rows with missing values.
+
+allmovies$year_num <- as.numeric(allmovies$year)
+allmovies$runtime_num <- as.numeric(sub(" min", "", allmovies$runtime))
+
+q1data <- subset(allmovies,
+  !is.na(rating) &
+  !is.na(votes) &
+  !is.na(year_num) &
+  !is.na(runtime_num) &
+  !is.na(certificate) &
+  year_num >= 2000 &
+  year_num <= 2023
+)
+
+q1data$main_genre <- sub(",.*", "", q1data$genre)
+q1data$main_genre <- as.factor(trimws(q1data$main_genre))
+q1data$certificate <- as.factor(q1data$certificate)
+
+str(q1data)
+summary(q1data)
+```
+
+The dataset originally consisted of multiple files separated by genre, so first combined them into a single dataset. I combined all of these into a single dataset and removed duplicate entries based on movie IDs to ensure that each movie appeared only once. Then, removed unnecessary variables like description, director information, and gross revenue.
+
+Next, I cleaned and formatted the data. The release year and runtime were converted into numeric variables, and I filtered the dataset to include only movies released between 2000 and 2023. Observations with missing values in key variables like ratings, votes, runtime, and certificate were removed.
+
+Since movies can have multiple genres, I created a “main genre” variable by extracting the first listed genre. Certificate ratings were also converted into categorical variables.
+
+```{r, echo=T}
+# The number of votes is highly skewed, so we apply a log transformation.
+q1data$log_votes <- log(q1data$votes + 1)
+
+# Remove unrealistic runtime outliers
+q1data <- subset(q1data, runtime_num >= 40 & runtime_num <= 240)
+
+summary(q1data$log_votes)
+summary(q1data$runtime_num)
+```
+
+Because the number of votes was highly skewed, I applied a log transformation. Then removed extreme runtime values to avoid the influence of outliers.
+
+```{r, echo=T}
+# Create vote groups based on quintiles of log-transformed votes
+q1data$vote_group <- cut(
+  q1data$log_votes,
+  breaks = quantile(q1data$log_votes, probs = seq(0, 1, 0.2), na.rm = TRUE),
+  include.lowest = TRUE
+)
+
+# Calculate average rating by vote group
+vote_summary <- aggregate(rating ~ vote_group, data = q1data, mean)
+
+ggplot(vote_summary, aes(x = vote_group, y = rating, group = 1)) +
+  geom_point(size = 3) +
+  geom_line() +
+  labs(title = "Average Rating by Vote Group",
+       x = "Log(Votes) Group",
+       y = "Average Rating") +
+  theme_minimal()
+
+ggsave("average_rating_by_vote_group.png", width = 8, height = 6)
+
+ggplot(q1data, aes(x = log_votes, y = rating)) +
+  geom_point(alpha = 0.05) +
+  geom_smooth(method = "lm") +
+  theme_minimal()
+```
+
+First I tested the relationship between the number of votes and movie ratings. Since the vote distribution was highly skewed, I used a log transformation before visualizing it. The scatterplot shows a slight positive relationship, meaning that movies with more votes tend to have higher ratings. But, the points are widely distributed, indicating that the relationship is weak. Even movies with similar vote counts can have very different rating results. This suggests that while votes have some influence, they are not strong predictors on their own.
+
+To better understand this pattern, I grouped movies into categories based on vote levels and calculated the average rating for each group. Based on the result, the relationship is not strictly linear. Movies with very low vote counts tend to have relatively high average ratings, while movies in the mid-range vote groups show noticeably lower ratings. As the number of votes increase further, the average rating rises again. This created a U-shaped pattern rather than a simple increasing trend. Overall, this indicates that the relationship between votes and ratings is more complex than a simple positive correlation.
+
+```{r, echo=T}
+ggplot(q1data, aes(x = reorder(main_genre, rating, median), y = rating)) +
+  geom_boxplot() +
+  labs(title = "Movie Ratings by Main Genre",
+       x = "Main Genre",
+       y = "Rating") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  stat_summary(fun = median, geom = "point", color = "red", size = 2)
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+ggsave("ratings_by_main_genre.png", width = 10, height = 6)
+
+```
+
+Next, I tested how movie ratings vary across different genres using a boxplot. The plot shows that there are differences in median ratings across genres, but the differences are not extreme. Genres like biography, history, and reality-TV tend to have higher median ratings, while genres like horror and sci-fi generally have lower median ratings. Based on this result, genre does play a role in explaining ratings, but it is not a dominant factor.
+
+```{r, echo=T}
+# Compare several linear regression models for Q1
+m1 <- lm(rating ~ main_genre + log_votes + year_num, data = q1data)
+m2 <- lm(rating ~ main_genre + log_votes + year_num + runtime_num, data = q1data)
+m3 <- lm(rating ~ main_genre + log_votes + year_num + runtime_num + certificate, data = q1data)
+
+summary(m1)$r.squared
+summary(m2)$r.squared
+summary(m3)$r.squared
+
+# Final model for Q1
+model_final <- m3
+summary(model_final)
+```
+
+Model Development:
+To quantify these relationships, I built three linear regression models. The first model included the main genre, log-transformed votes, and release year. The second model added runtime, and the third model included certificate ratings as well. Each additional variable slightly improved the model. The R-squared increased from about 10.4% in the base model to approximately 13.3% in the final model. Overall explanatory power remains low while showing some improvement.
+
+Model Interpretation:
+In the final model, several predictors were statistically significant, but their practical influence is limited. Genres like animation, biography, and drama were associated with higher ratings. Genres like horror and sci-fi were associated with lower ratings. However, as it is observed in the EDA, there is substantial overlap across genres, which limits their predictive strength. 
+
+The number of votes has a positive coefficient, but the effect size is very small. I believe this aligns with the earlier observation that the relationship between votes and ratings is not strictly linear and may not be captured by simple linear graphs.
+
+Runtime showed a slight positive relationship with ratings, which indicates that longer movies tend to have higher ratings on average. And lastly, certificate ratings also showed some differences. Overall, even though these predictors are statistically significant, none of them strongly predict movie ratings.
+
+```{r, echo=T}
+# Create predicted ratings from the final linear regression model
+q1data$pred_rating <- predict(model_final)
+
+# Create a random sample for cleaner scatterplots
+set.seed(123)
+sample_q1 <- q1data[sample(nrow(q1data), 5000), ]
+
+ggplot(sample_q1, aes(x = pred_rating, y = rating)) +
+  geom_point(alpha = 0.2) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed") +
+  labs(title = "Predicted vs Actual Ratings (Sample of 5,000 Movies)",
+       x = "Predicted Rating",
+       y = "Actual Rating") +
+  geom_smooth(method = "lm", color = "blue", se = FALSE)
+  theme_minimal()
+
+ggsave("predicted_vs_actual_sample.png", width = 8, height = 6)
+
+```
+
+The predicted vs actual plot showed a clear positive trend, which indicates that the model is able to capture general patterns in the data. But, the points are widely scattered around the diagonal line, meaning the substantial prediction error. A lot of movies with similar predicted ratings have very different actual ratings. This pattern can indicate that the model is able to identify overall trends, but lacks the precision needed for accurate prediction at the individual movie level.
+
+Conclusion:
+Overall, the model provides some insight into the general relationship between predictors and ratings, but it is not strong enough to be used as a reliable prediction tool. This limitation is likely due to missing variables like cast, director information, budget, and audience preferences, which could play a major role in predicting movie ratings. 
+
+# Question 2: How well can we predict whether a movie is rated above the IMDb average (6.3) based on genre, runtime, and number of votes? 
+For question 2, we wanted to see how well we could predict if a movie was rated above or below average on IMDb.  To do this, we used the predictors of genre, runtime, and number of votes.  The binary response variable was whether or not the movie was rated 6.3 or higher, which is the average movie rating on IMDb's website.  This response variable was fixed at 6.3 rather than calculated using our sample as while completing EDA and model building, the mean value would change slightly.  It just made more sense to fix the value at 6.3 and predict based on that.  However, before beginning model selection, some data cleaning was required.
+
+```{r, echo=T}
+#Importing Necessary Libraries
+library(ezids)
+library(ggplot2)
+library(car)
+library(pscl)
+
+#Importing each .csv as data frames, grouped by genre
+action = read.csv("action.csv")  
+adventure = read.csv("adventure.csv")
+animation = read.csv("animation.csv")
+biography = read.csv("biography.csv")
+crime = read.csv("crime.csv")
+family = read.csv("family.csv")
+fantasy = read.csv("fantasy.csv")
+noir = read.csv("film-noir.csv")
+history = read.csv("history.csv")
+horror = read.csv("horror.csv")
+mystery = read.csv("mystery.csv")
+romance = read.csv("romance.csv")
+scifi = read.csv("scifi.csv")
+sports = read.csv("sports.csv")
+thriller = read.csv("thriller.csv")
+war = read.csv("war.csv")
+```
+
+```{r, echo=T}
+#Checking structure of the data frames (all should be the same as action)
+str(action)
+```
+```{r, echo=T}
+#We can remove some columns as we will not be needing them (some others are left in as we could use possibly ask more questions about them later)
+action = subset(action, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+#Showing the new structure of the data frame
+str(action)
+```
+```{r, echo=T}
+#Removing the columns for the rest of the data frames
+adventure = subset(adventure, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+animation = subset(animation, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+biography = subset(biography, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+crime = subset(crime, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+family = subset(family, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+fantasy = subset(fantasy, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+noir = subset(noir, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+history = subset(history, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+horror = subset(horror, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+mystery = subset(mystery, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+romance = subset(romance, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+scifi = subset(scifi, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+sports = subset(sports, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+thriller = subset(thriller, select = -c(description, director, director_id, star, star_id, gross.in...))
+
+war = subset(war, select = -c(description, director, director_id, star, star_id, gross.in...))
+```
+
+```{r, echo=T}
+
+#Data Cleaning
+
+allmovies = rbind(action, adventure, animation, biography, crime, family, fantasy, noir, history, horror, mystery, romance, scifi, sports, thriller, war)
+
+allmovies$year = as.numeric(allmovies$year)
+allmovies$runtime = as.numeric(gsub(" min", "", allmovies$runtime))
+
+allmovies$certificate = as.factor(allmovies$certificate)
+
+allmovies = subset(allmovies, year >=2000)
+
+#Remove duplicates
+allmovies = allmovies[!duplicated(allmovies$movie_id), ]
+
+#Check for duplicates
+duplicates = sum(duplicated(allmovies$movie_id))
+duplicates
+
+
+#Creating dummy variables for chosen genres
+allmovies$action = as.numeric(grepl("Action", allmovies$genre))
+allmovies$horror = as.numeric(grepl("Horror", allmovies$genre))
+allmovies$drama = as.numeric(grepl("Drama", allmovies$genre))
+allmovies$romance = as.numeric(grepl("Romance", allmovies$genre))
+allmovies$thriller = as.numeric(grepl("Thriller", allmovies$genre))
+allmovies$comedy = as.numeric(grepl("Comedy", allmovies$genre))
+allmovies$biography = as.numeric(grepl("Biography", allmovies$genre))
+allmovies$sports = as.numeric(grepl("Sport", allmovies$genre))
+allmovies$war = as.numeric(grepl("War", allmovies$genre))
+allmovies$scifi = as.numeric(grepl("Sci-Fi", allmovies$genre))
+allmovies$history = as.numeric(grepl("History", allmovies$genre))
+allmovies$fantasy = as.numeric(grepl("Fantasy", allmovies$genre))
+allmovies$crime = as.numeric(grepl("Crime", allmovies$genre))
+allmovies$mystery = as.numeric(grepl("Mystery", allmovies$genre))
+allmovies$animation = as.numeric(grepl("Animation", allmovies$genre))
+allmovies$family = as.numeric(grepl("Family", allmovies$genre))
+
+
+#I only want 4 major movie ratings
+G = subset(allmovies, certificate == "G")
+PG = subset(allmovies, certificate == "PG")
+PG13 = subset(allmovies, certificate == "PG-13")
+R = subset(allmovies, certificate == "R")
+
+
+allmovies=rbind(G, PG, PG13, R)
+allmovies$certificate = as.factor(allmovies$certificate)
+
+#Remove NA values from all variables to use
+allmovies = subset(allmovies, is.na(runtime) == FALSE)
+allmovies = subset(allmovies, is.na(certificate) == FALSE)
+allmovies = subset(allmovies, is.na(year) == FALSE)
+allmovies = subset(allmovies, is.na(action) == FALSE)
+allmovies = subset(allmovies, is.na(horror) == FALSE)
+allmovies = subset(allmovies, is.na(drama) == FALSE)
+allmovies = subset(allmovies, is.na(romance) == FALSE)
+allmovies = subset(allmovies, is.na(thriller) == FALSE)
+allmovies = subset(allmovies, is.na(comedy) == FALSE)
+allmovies = subset(allmovies, is.na(biography) == FALSE)
+allmovies = subset(allmovies, is.na(sports) == FALSE)
+allmovies = subset(allmovies, is.na(war) == FALSE)
+allmovies = subset(allmovies, is.na(scifi) == FALSE)
+allmovies = subset(allmovies, is.na(history) == FALSE)
+allmovies = subset(allmovies, is.na(fantasy) == FALSE)
+allmovies = subset(allmovies, is.na(crime) == FALSE)
+allmovies = subset(allmovies, is.na(mystery) == FALSE)
+allmovies = subset(allmovies, is.na(animation) == FALSE)
+allmovies = subset(allmovies, is.na(family) == FALSE)
+
+
+#Creating binary variable for highly rated movies
+allmovies$aboveavg = as.numeric(allmovies$rating >= 6.3)
+allmovies = subset(allmovies, is.na(aboveavg) == FALSE)
+
+#Final DF
+aafinal = allmovies[, c("aboveavg", "votes", "runtime", "year",  "certificate", "action", "horror", "drama" , "romance", "thriller", "comedy", "biography", "sports", "war", "scifi", "history", "fantasy", "crime", "mystery", "animation", "family")]
+```
+
+First, any missing or NA values were removed.  This included any missing values for my key variables of runtime, ratings, and genres.  I also removed any duplicate movies from the dataset, as we had combined multiple CSV files into one dataframe that originally contained multiple duplicates. Another step was that I only included movies that were rated G, PG, PG13, and R as I wanted to explore using those as predictors.  Other ratings were too imbalanced in sample size or were uninterpretable with too many sparse categories.   Once the basic data cleaning was completed, I created dummy variables to indicate the genres that a movie belonged to.  For example, if a movie was action and horror, the values for the “action” and “horror” variables would be 1.  This was completed for all genres that I wanted to test for and experiment with for model selection.  
+
+```{r, echo=T}
+#Train/Test Split
+library(caret)
+library(pROC) 
+
+set.seed(528)
+
+test = createDataPartition(aafinal$aboveavg, p =.2, list = FALSE)
+datatrain = aafinal[-test,]
+datatest = aafinal[test,]
+
+#New Model
+model2 = glm(aboveavg ~ runtime + votes + action + horror + drama + romance + thriller + biography + war + scifi + history + fantasy + animation, data = datatrain, family = "binomial")
+
+vif(model2)
+pR2(model2)
+
+summary(model2)
+```
+
+After the data cleaning, I can begin selecting my model.  Given the binary response variable, logistic regression and a classification tree were chosen to be my methods.  I also wanted to do a 80/20 train/test split, meaning my model would be trained on 80% of our sample data and would predict 20% of the data which was new to the model.  Stratified sampling was used for this to keep classification balance intact. This methodology was chosen as I wanted to test the models accuracy on unseen data and compare it to the seen data as well.  In order to choose what predictor variables I wanted in the model, I first ran the model with all my chosen genres to see how it performed.  Upon running the first iteration, I noticed that certain genres contained very few movies.  Genres like “comedy” and “sports” had very small group sizes, so I removed them from the data.  I also removed some predictors like “crime” which also had a small sample size.  Removing the certificate predictor, or age rating, also improved the model which surprised me.  This helped reduce AIC, produced the AUC above .8, had VIFs all between 1 and 1.37 (good sign of no multicollinearity), saw a pseudo R-squared value of .274 (good model fit), and provided the best accuracy between train and test sets.  Through fine tuning the model, I settled on my final model formula (aboveavg ~ runtime + votes + action + horror + drama + romance + thriller + biography + war + scifi + history + fantasy + animation, family).  Through my testing, this formula produced the most stable and accurate results, which for my predictive question were exactly what I was looking for in the model.  Let’s further examine the prediction results of my final model.
+
+```{r, echo=T}
+
+#Test
+aaprob2 = predict(model2, newdata=datatest, type = "response")
+aaprediction2 = as.numeric(aaprob2 > .5)
+
+table(Predicted = aaprediction2, Actual = datatest$aboveavg)
+
+#Train
+aaprob3 = predict(model2, newdata=datatrain, type = "response")
+aaprediction3 = as.numeric(aaprob3 > .5)
+
+table(Predicted = aaprediction3, Actual = datatrain$aboveavg)
+
+```
+
+```{r, echo=T}
+print("Accuracy Test")
+(431 + 1404) / (431 + 1404 + 123 + 370)
+
+print("Accuracy Train")
+(1799 + 5489) / (1799 + 5489 + 530 + 1490)
+
+print("Precision Test")
+(431)/ (431 + 123)
+
+print("Precision Train")
+(1799)/ (1799 +530)
+
+print("Recall Rate Test")
+(431)/ (431 + 370)
+
+print("Recall Rate Train")
+(1799)/ (1799 + 1490)
+
+print("Specificity Test")
+(1404)/ (1404 + 123)
+
+print("Specificity Train")
+(5489)/ (5489 + 530)
+```
+
+```{r, echo=T}
+
+h = roc(datatest$aboveavg ~ aaprob2, data = datatest)
+
+auc(h)
+plot(h)
+```
+
+The predictions on the unseen data were relatively solid, showing an accuracy of 78.8%, a noticeable increase in accuracy from just guessing the more popular classification.  The AUC ended up at .837, which is above the .8 threshold that we look for, meaning the model was strong at distinguishing between classes. The ROC curve followed the trajectory that we expect from a good model, meaning it is much better at prediction than any sort of random guessing. The precision was 77.8%, meaning the model had solid accuracy when it predicted a movie to be above 6.3 rated.  However, the recall rate was 53.8%, which meant the model was not fantastic at catching movies above 6.3, though when it did predict over 6.3 it was relatively accurate as shown by the precision.  The specificity was 91.9%, meaning that the model was great at predicting movies rated below 6.3.  I also predicted the training data to see if the model was possibly overfitting.  However, all metrics were similar across the test and train data, and no performance drop was noticeable.  This suggests that the model is not overfitting and can be a reliable predictor for whether or not a movie is rated above or below 6.3 on IMDb.
+
+```{r, echo=T}
+library(rpart)
+library(rpart.plot)
+
+set.seed(852)
+
+treefit = rpart(aboveavg ~ runtime + votes + action + horror + drama + romance + thriller + biography + war + scifi + history + fantasy + animation, data = datatrain, method = "class", control = list(maxdepth = 4))
+
+summary(treefit)
+
+rpart.plot(treefit)
+```
+
+With the logistic regression completed, I also wanted to try a decision/classification tree to possibly uncover any other patterns.  The same formula and 80/20 train/test split were used, and a max of 4 levels of feature splits were implemented  to minimize overfitting and variance..  Looking at the tree, we can see that the features  chosen for the splits were number of votes, runtime, whether the movie was a drama, and whether the movie was an animated movie.  Let’s examine the predictive power of the classification tree.
+
+```{r, echo=T}
+#Test
+treeprediction = predict(treefit, newdata = datatest, type = "class")
+table(Predicted = treeprediction, Actual = datatest$aboveavg)
+
+#Train
+treeprediction2 = predict(treefit, newdata = datatrain, type = "class")
+table(Predicted = treeprediction2, Actual = datatrain$aboveavg)
+
+#Test
+cm = confusionMatrix(treeprediction, reference = as.factor(datatest$aboveavg))
+cm$overall
+cm$byClass
+
+#Train
+cm2 = confusionMatrix(treeprediction2, reference = as.factor(datatrain$aboveavg))
+cm2$overall
+cm2$byClass
+```
+
+Looking at the prediction metrics on the test data, we see an accuracy of 78.8%, indicating again good overall predictive performance.  The precision was 79.6%, showing that the model had good accuracy on the movies it predicted to be above 6.3. The recall rate was 91%, showing that it was catching most of the above average movies.  However, this time the specificity was relatively lower at 55.6%, meaning the model was not great at catching movies rated below 6.3%. Let’s again compare the test and training prediction metrics. Looking at the results, we see very similar results with no performance drop, suggesting that the model is not overfitting. 
+
+Comparing the results for both the logistic regression and the classification tree, we can conclude that both models reliably predict whether a movie is above or below average (6.3 rated) on IMDb.  While both models are accurate, each one has their drawbacks or tradeoffs from the other. Determining which model is better to use depends on if you want to minimize false negatives or minimize false positives.  The logistic model predicted more false negatives, while the classification tree predicted more false positives.  Regardless, both of these models met the criteria necessary to answer our question.  Yes, we can reliably predict if a movie was rated above or below average on IMDb using genre, runtime, and number of votes.
+
+# Question 3: How does the number of votes affect movie ratings after considering genre and release year?
+Our third question is all about inference. We examine how the number of votes a movie receives affects its IMDB rating, while accounting for the movie's release year and genre. The first step was visualizing how ratings differ across genres. The boxplot below shows that some genres consistently rate higher than others. Biography and Animation movies tend to have higher median ratings, while Horror movies have noticeably lower ratings. This variation in ratings by genre was a clear indication that we had to control for it. Additionally the correlation matrix below reveals that rating, votes, and year all have very weak relationships with each other. Rating and votes only have a correlation of 0.12, meaning votes alone do not predict ratings very well. 
+
+```{r, echo=T}
+#Importing Necessary Libraries
+library(ezids)
+library(ggplot2)
+library(dplyr)
+library(car)
+
+action <- read.csv("action.csv")
+adventure <- read.csv("adventure.csv")
+animation <- read.csv("animation.csv")
+biography <- read.csv("biography.csv")
+crime <- read.csv("crime.csv")
+family <- read.csv("family.csv")
+fantasy <- read.csv("fantasy.csv")
+noir <- read.csv("film-noir.csv")
+history <- read.csv("history.csv")
+horror <- read.csv("horror.csv")
+mystery <- read.csv("mystery.csv")
+romance <- read.csv("romance.csv")
+scifi <- read.csv("scifi.csv")
+sports <- read.csv("sports.csv")
+thriller <- read.csv("thriller.csv")
+war <- read.csv("war.csv")
+
+action$genre <- "Action" 
+adventure$genre <- "Adventure"
+animation$genre <- "Animation"
+biography$genre <- "Biography"
+crime$genre <- "Crime"
+family$genre <- "Family"
+fantasy$genre <- "Fantasy"
+noir$genre <- "Film-Noir"
+history$genre <- "History"
+horror$genre <- "Horror"
+mystery$genre <- "Mystery"
+romance$genre <- "Romance"
+scifi$genre <- "Sci-Fi"
+sports$genre <- "Sports"
+thriller$genre <- "Thriller"
+war$genre <- "War"
+
+action <- action[, c("movie_id", "year", "rating", "votes", "genre")]
+adventure <- adventure[, c("movie_id", "year", "rating", "votes", "genre")]
+animation <- animation[, c("movie_id", "year", "rating", "votes", "genre")]
+biography <- biography[, c("movie_id", "year", "rating", "votes", "genre")]
+crime <- crime[, c("movie_id", "year", "rating", "votes", "genre")]
+family <- family[, c("movie_id", "year", "rating", "votes", "genre")]
+fantasy <- fantasy[, c("movie_id", "year", "rating", "votes", "genre")]
+noir <- noir[, c("movie_id", "year", "rating", "votes", "genre")]
+history <- history[, c("movie_id", "year", "rating", "votes", "genre")]
+horror <- horror[, c("movie_id", "year", "rating", "votes", "genre")]
+mystery <- mystery[, c("movie_id", "year", "rating", "votes", "genre")]
+romance <- romance[, c("movie_id", "year", "rating", "votes", "genre")]
+scifi <- scifi[, c("movie_id", "year", "rating", "votes", "genre")]
+sports <- sports[, c("movie_id", "year", "rating", "votes", "genre")]
+thriller <- thriller[, c("movie_id", "year", "rating", "votes", "genre")]
+war <- war[, c("movie_id", "year", "rating", "votes", "genre")]
+
+allmovies <- rbind(action, adventure, animation, biography, crime, 
+                   family, fantasy, noir, history, horror, 
+                   mystery, romance, scifi, sports, thriller, war)
+
+
+allmovies <- allmovies[!duplicated(allmovies$movie_id), ]
+
+allmovies$year <- as.numeric(allmovies$year)
+movies <- subset(allmovies, !is.na(rating) & !is.na(votes) & votes > 0 & 
+                 !is.na(year) & year >= 2000 & year <= 2023)
+
+movies$genre <- as.factor(movies$genre)
+
+```
+
+```{r, echo=T}
+
+ggplot(movies, aes(x = reorder(genre, rating, median), y = rating, fill = genre)) +
+  geom_boxplot() +
+  labs(title = "Movie Ratings by Genre", 
+       x = "", 
+       y = "IMDB Rating") +
+  theme_minimal()
+
+cor(movies[, c("rating", "votes", "year")])
+```
+
+We built three linear regression models starting simple and adding then increasing the number of regressors, model 1 only used votes as a regressor. Model 2 added the release year as a regressor,  and model 3 added the genres as a regressor. We ensured that there was no multicollinearity by checking the VIF values for model 2 and 3, and used ANOVA to compare and assess the models in order to determine whether adding each new variable significantly improved the model.
+
+```{r, echo=T}
+m1 <- lm(rating ~ votes, data = movies)
+summary(m1)
+```
+
+Model 1 shows that votes alone have a statistically significant effect on ratings (p <  2e-16), although  the effect is very small. The coefficient for votes is 0.00000327, this means that every additional 300,000 votes a movie receives its rating increases by 1 point. The R-squared is only 0.0145 so votes explain less than 1.5% of the variation in ratings.
+
+```{r, echo=T}
+m2 <- lm(rating ~ votes + year, data = movies)
+summary(m2)
+ezids::xkablevif(m2)
+```
+
+Model 2 adds release year as a regressor and it is statistically significant (p = 9.4e-10) with a coefficient of 0.00534. So this means that every additional year you go up from 2000, the rating goes up by about 0.005 points. The votes coefficient barely moved from Model 1, and the R-squared only bumped up to 0.015. So the release year explains very little. The VIF values came in under 5, so multicollinearity is not a problem.
+
+```{r, echo=T}
+m3 <- lm(rating ~ votes + year + genre, data = movies)
+summary(m3)
+ezids::xkablevif(m3)
+```
+
+Model 3 adds genres and the R-squared increases to 0.112. This means that genre alone explains around 10% of rating variation that votes and year could not. Compared to action movies, biography movies are rated 0.926 points higher, animation movies are rated 0.624 points higher, and horror movies are rated 0.776 points lower. The effect of votes remains very small at 0.00000324, and the same goes for year, which is at 0.0096 per year. The VIF values are all low, so no multicollinearity. Furthermore the ANOVA test below confirms that model 3 is significantly better than both model 1 and model 2 (p <  2e-16).
+
+```{r, echo=T}
+anovares <- anova(m1, m2, m3)
+anovares
+```
+
+Overall the effects that votes and year have on ratings are statistically significant but practically meaningless. The unexpected realization is that a movie's genre tells us much more about its likely rating than how many votes it received or even when it came out. Our third model only explains 11.2% of rating variation, and so about 88.8% of why movies get certain ratings remains unexplained. Other factors like budget, director, lead actors, and marketing likely matter a lot. Nevertheless the number of votes does affect movie ratings, but the effect is so small it barely matters. A movie would need hundreds of thousands of extra votes to move its rating by even one point. Genre and other unmeasured factors are more significant determinants of ratings. 
+
